@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sloty — Golden Ace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1923; --bg-2:#141f2b; --panel:#1a2733; --panel-2:#213743;
+  --border:#2f4553; --border-2:#3d5666;
+  --text:#ffffff; --muted:#8a9fb2; --muted-2:#b1bad3;
+  --accent:#f0b90b; --accent-2:#ffd54a;
+  --green:#00e701; --red:#ff4d4d;
+  --radius:12px; --radius-lg:16px;
+  --gold:#f0b90b;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  min-height:100vh;color:var(--text);
+  font-family:'Manrope',system-ui,-apple-system,sans-serif;font-weight:500;
+  background:var(--bg);
+  background-image:
+    radial-gradient(1200px 600px at 50% -10%, #1e3446 0%, transparent 60%),
+    radial-gradient(900px 500px at 100% 100%, #16232f 0%, transparent 50%);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+h1,h2,h3{font-family:'Manrope',sans-serif;font-weight:800;margin:0;letter-spacing:-0.025em}
+.hide{display:none!important}
+.icon{width:1em;height:1em;display:inline-block;vertical-align:-0.14em;flex-shrink:0;stroke-width:1.8}
+
+/* ============ HEADER ============ */
+header{
+  position:sticky;top:0;z-index:50;
+  display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:14px 24px;
+  background:rgba(15,25,35,.85);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-0.02em;text-decoration:none}
+.brand-logo{width:24px;height:24px;color:var(--accent);flex-shrink:0}
+.brand span{color:var(--text);font-weight:600}
+.brand b{color:var(--accent);font-weight:800}
+.hgroup{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.bal{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:10px;padding:8px 14px;font-weight:700;font-size:14px;
+  color:var(--muted-2);font-variant-numeric:tabular-nums;
+}
+.bal .icon{width:15px;height:15px;color:var(--accent)}
+.bal span{color:var(--accent-2);font-weight:800}
+
+/* ============ BUTTONS ============ */
+button{
+  font:inherit;font-weight:700;font-size:14px;
+  cursor:pointer;border-radius:10px;
+  border:1px solid var(--border);
+  background:var(--panel);color:var(--text);
+  padding:10px 16px;transition:.15s;
+  display:inline-flex;align-items:center;gap:8px;justify-content:center;
+}
+button:hover:not(:disabled){border-color:var(--border-2);background:var(--panel-2)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button .icon{width:16px;height:16px}
+
+/* ============ LAYOUT ============ */
+#slots{max-width:1280px;margin:0 auto;padding:22px 20px;--h:clamp(66px,11vw,98px)}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px}
+.top h2{color:var(--text);font-size:20px;font-weight:800;display:flex;align-items:center;gap:10px}
+.top h2 svg{width:20px;height:20px;color:var(--accent)}
+
+/* ============ CABINET ============ */
+.cab{
+  border:1px solid var(--border-2);border-radius:20px;
+  background:linear-gradient(180deg,#1a2733,#141f2b);
+  box-shadow:0 30px 60px -25px #000c,inset 0 1px 0 rgba(255,255,255,.05);
+  padding:22px;
+}
+.jp{text-align:center;margin-bottom:18px}
+.jp small{letter-spacing:.2em;font-weight:700;font-size:11px;color:var(--accent);text-transform:uppercase}
+.jp h2{
+  font-size:clamp(26px,5vw,42px);color:#fff;font-weight:800;letter-spacing:-0.02em;margin:6px 0;
+  text-shadow:0 0 18px rgba(240,185,11,.4);
+}
+.jp .val{color:var(--muted-2);font-weight:700;font-size:14px;font-variant-numeric:tabular-nums}
+.jp .val span{color:var(--accent-2)}
+
+.sl{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+
+/* ============ REELS ============ */
+.reels{
+  display:flex;gap:6px;background:#0a1219;
+  border:2px solid rgba(240,185,11,.4);border-radius:14px;padding:8px;
+  box-shadow:inset 0 0 30px #000;
+}
+.reel{
+  flex:1;min-width:0;height:calc(var(--h)*3);overflow:hidden;border-radius:8px;
+  background:linear-gradient(#101a24,#1e2f3e 50%,#101a24);
+  box-shadow:inset 0 0 14px #000;
+}
+.strip{will-change:transform}
+.sy{height:var(--h);display:grid;place-items:center;font-size:calc(var(--h)*.6);line-height:1}
+.sy.hit{
+  animation:hit .45s infinite alternate;box-shadow:inset 0 0 16px #ffe066;
+  position:relative;z-index:2;
+}
+@keyframes hit{to{background:rgba(240,185,11,.55);transform:scale(1.07)}}
+.sy.wx{animation:wx .7s;background:radial-gradient(rgba(240,185,11,.8),rgba(255,179,0,.27) 70%)}
+@keyframes wx{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.25)}100%{transform:scale(1);opacity:1}}
+.s7{font:italic 900 .82em Georgia,serif;color:#e01b2f;-webkit-text-stroke:1.5px #fff3;text-shadow:0 3px 0 #7a0a14,0 0 12px #ff6060}
+.bell{filter:drop-shadow(0 0 10px #ffd400)}
+
+/* ============ CONTROLS ============ */
+#smsg{
+  text-align:center;min-height:34px;margin:14px 0 10px;
+  font-size:17px;font-weight:700;color:var(--accent-2);letter-spacing:-0.01em;
+}
+.sctrl{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
+.sctrl span{font-size:13px;color:var(--muted-2);font-weight:600}
+.sctrl span b{color:var(--text);font-weight:800}
+#sspin{
+  background:linear-gradient(180deg,var(--accent-2),var(--accent));
+  color:#1a1500;font-size:15px;padding:12px 34px;letter-spacing:.08em;
+  border-color:var(--accent);font-weight:800;
+}
+#sspin:hover:not(:disabled){filter:brightness(1.1)}
+#stest{font-size:12px;padding:8px 12px;color:var(--muted);border-color:var(--border)}
+#stest:hover:not(:disabled){color:var(--text)}
+
+/* ============ PAYTABLE ============ */
+.ptab{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pt{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg-2);border:1px solid var(--border);border-radius:10px}
+.pi{font-size:28px;line-height:1;min-width:34px;text-align:center}
+.pv{font-size:12px;line-height:1.35;color:var(--muted-2);font-weight:600}
+.pv b{color:var(--accent-2);font-weight:800}
+.pv small{font-size:10px;line-height:1.2;display:block;opacity:.85;margin-top:2px}
+
+/* ============ JACKPOT OVERLAY ============ */
+.jpov{
+  position:fixed;inset:0;z-index:90;display:grid;place-items:center;text-align:center;
+  background:rgba(0,0,0,.75);pointer-events:none;overflow:hidden;
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+}
+.jpov div{
+  font:800 clamp(44px,12vw,120px) 'Manrope',sans-serif;color:#fff5c8;
+  text-shadow:0 0 24px #ffd76a,0 0 60px #ff8a00;letter-spacing:-0.03em;line-height:1.05;
+}
+.jpov .amt{font-size:32px;font-weight:800;color:var(--accent-2);display:block;margin-top:8px}
+.coin{position:absolute;top:-50px;font-size:30px;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(115vh) rotate(720deg)}}
+
+/* ============ RESPONSIVE ============ */
+@media(max-width:900px){.sl{grid-template-columns:1fr}}
+@media(max-width:600px){
+  header{padding:12px 16px}
+  .brand{font-size:15px}
+  #slots{padding:16px 12px}
+  .cab{padding:16px}
+}
+</style></head><body>
+
+<header>
+  <a href="/" class="brand">
+    <svg class="brand-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+      <path d="M6 3h12l3 6-9 12L3 9z"/>
+      <path d="M3 9h18M9 3l-1 6 4 12M15 3l1 6-4 12"/>
+    </svg>
+    <span><b>GOLDEN</b> ACE</span>
+  </a>
+  <div class="hgroup">
+    <div class="bal">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="9"/>
+        <circle cx="12" cy="12" r="5" stroke-dasharray="2 2.5"/>
+      </svg>
+      Żetony: <span id="bal">1000</span>
+    </div>
+  </div>
+</header>
+
+<section id="slots">
+<div class="top">
+  <a href="/" style="text-decoration:none"><button>
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 12H5M12 19l-7-7 7-7"/>
+    </svg>
+    Lobby
+  </button></a>
+  <h2>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="8" width="18" height="12" rx="2"/>
+      <path d="M7 8V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/>
+      <circle cx="8" cy="14" r="1.2"/>
+      <circle cx="12" cy="14" r="1.2"/>
+      <circle cx="16" cy="14" r="1.2"/>
+    </svg>
+    Sloty
+  </h2>
+  <span style="width:80px"></span>
+</div>
+
+<div class="cab">
+<div class="jp">
+  <small>5 takich samych uruchamia</small>
+  <h2>🔔 JACKPOTA 🔔</h2>
+  <div class="val">Jackpot: <span id="jpv"></span> żetonów</div>
+</div>
+<div class="sl">
+<div>
+<div class="reels" id="reels"></div>
+<div id="smsg">Zakręć bębnami! (spacja)</div>
+<div class="sctrl">
+<button onclick="sBetChg(-1)">−</button>
+<span>Stawka na linię: <b id="sbet"></b> × 10 linii = <b id="scost"></b></span>
+<button onclick="sBetChg(1)">+</button>
+<button id="sspin" onclick="sSpin()">SPIN</button>
+<button id="stest" onclick="sSpin(true)">Test jackpotu</button>
+</div>
+</div>
+<div class="ptab" id="ptab"></div>
+</div></div>
+<div class="jpov hide" id="jpov"><div>JACKPOT!<br><span class="amt" id="jpamt"></span></div></div>
+</section>
+
+<script>
+let bal=1000;const $=id=>document.getElementById(id);
+/* ===== SLOTY ===== */
+const PLUM='<svg viewBox="0 0 40 40" width="1em" height="1em"><ellipse cx="20" cy="24" rx="13" ry="12" fill="#6a2c9a"/><ellipse cx="15" cy="19" rx="4" ry="3" fill="#ffffff55"/><path d="M20 12c0-5 4-8 9-8-1 5-4 8-9 8z" fill="#3fa34d"/></svg>';
+const SY={
+seven:{h:'<b class="s7">7</b>',pay:{3:50,4:200,5:1500},w:5},
+melon:{h:'🍉',pay:{3:25,4:100,5:250},w:8},
+grape:{h:'🍇',pay:{3:20,4:45,5:100},w:11},
+plum:{h:PLUM,pay:{3:10,4:25,5:60},w:14},
+orange:{h:'🍊',pay:{3:10,4:20,5:50},w:15},
+lemon:{h:'🍋',pay:{3:5,4:10,5:40},w:18},
+cherry:{h:'🍒',pay:{2:2,3:5,4:10,5:30},w:22},
+bell:{h:'<span class="bell">🔔</span>',w:6}};
+const POOL=[];for(const k in SY)for(let i=0;i<SY[k].w;i++)POOL.push(k);
+const rnd=()=>POOL[Math.random()*POOL.length|0];
+const LINES=[[1,1,1,1,1],[0,0,0,0,0],[2,2,2,2,2],[0,1,2,1,0],[2,1,0,1,2],[0,0,1,2,2],[2,2,1,0,0],[1,0,0,0,1],[1,2,2,2,1],[1,0,1,2,1]];
+const SBETS=[1,2,5,10,25];let sbi=0,sBusy=false,sg=null;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const cell=id=>`<div class="sy">${SY[id].h}</div>`;
+const sBet=()=>SBETS[sbi];
+function upd(){$('bal').textContent=bal;$('sbet').textContent=sBet();$('scost').textContent=sBet()*10;$('jpv').textContent=(5000*sBet()).toLocaleString('pl-PL')}
+function sBetChg(d){if(sBusy)return;sbi=Math.min(SBETS.length-1,Math.max(0,sbi+d));upd()}
+function buildSlots(){
+sg=sg||[...Array(5)].map(()=>[rnd(),rnd(),rnd()]);
+$('reels').innerHTML=sg.map(c=>`<div class="reel"><div class="strip">${c.map(cell).join('')}</div></div>`).join('');
+const ord=['seven','melon','grape','plum','orange','lemon','cherry'];
+$('ptab').innerHTML=ord.map(k=>{const p=SY[k].pay;return `<div class="pt"><span class="pi">${SY[k].h}</span><span class="pv">${[5,4,3,2].filter(n=>p[n]).map(n=>`${n}x <b>${p[n].toLocaleString('pl-PL')}</b>`).join('<br>')}</span></div>`}).join('')
++`<div class="pt"><span class="pi">${SY.bell.h}</span><span class="pv">Dzwonek<small>5 dzwonków = JACKPOT</small></span></div>`;
+upd();
+}
+const strips=()=>[...document.querySelectorAll('.strip')];
+function evalLine(ids){
+let base=ids.find(x=>x!=='bell')||'seven',n=0;
+for(const id of ids){if(id===base||id==='bell')n++;else break}
+const m=SY[base].pay[n];return m?{n,mult:m}:null;
+}
+async function sSpin(test){
+if(sBusy)return;
+const cost=test===true?0:sBet()*10;
+if(cost>bal){$('smsg').textContent='Za mało żetonów – zmniejsz stawkę.';return}
+sBusy=true;bal-=cost;upd();
+['sspin','stest'].forEach(i=>$(i).disabled=true);
+$('smsg').textContent='Kręcimy…';
+let res=[...Array(5)].map(()=>[rnd(),rnd(),rnd()]);
+if(test===true)res=res.map(c=>{const a=c.map(x=>x==='bell'?'cherry':x);a[Math.random()*3|0]='bell';return a});
+const st=strips(),H=document.querySelector('.reel').clientHeight/3;
+st.forEach((el,c)=>{const ids=[...sg[c]];for(let i=0;i<14+c*7;i++)ids.push(rnd());ids.push(...res[c]);
+el.style.transition='none';el.innerHTML=ids.map(cell).join('');el.style.transform='translateY(0)'});
+void document.body.offsetHeight;
+st.forEach((el,c)=>{const n=el.children.length-3;
+el.style.transition=`transform ${1.2+c*.4}s cubic-bezier(.2,.85,.3,1.06)`;el.style.transform=`translateY(${-n*H}px)`});
+await sleep(1200+4*400+200);
+st.forEach((el,c)=>{el.style.transition='none';el.innerHTML=res[c].map(cell).join('');el.style.transform='translateY(0)'});
+const bc=[0,1,2,3,4].filter(c=>res[c].includes('bell'));
+if(bc.length){
+await sleep(350);
+bc.forEach(c=>{res[c]=['bell','bell','bell'];st[c].innerHTML=res[c].map(()=>`<div class="sy wx">${SY.bell.h}</div>`).join('')});
+await sleep(800);
+}
+sg=res;
+if(bc.length===5){
+const amt=test===true?0:5000*sBet();bal+=amt;upd();
+$('jpamt').textContent=test===true?'(test – bez wypłaty)':'+'+amt.toLocaleString('pl-PL')+' żetonów';
+$('smsg').textContent='🔔 JACKPOT! 🔔';
+const ov=$('jpov');ov.classList.remove('hide');
+for(let i=0;i<45;i++){const c=document.createElement('span');c.className='coin';c.textContent='🪙';c.style.left=Math.random()*100+'%';c.style.animationDuration=(2+Math.random()*2.5)+'s';c.style.animationDelay=Math.random()*1.5+'s';ov.appendChild(c)}
+await sleep(5000);
+ov.querySelectorAll('.coin').forEach(x=>x.remove());ov.classList.add('hide');
+}else{
+let tot=0,wl=[];
+LINES.forEach((ln,i)=>{const w=evalLine(ln.map((r,c)=>res[c][r]));
+if(w){tot+=w.mult*sBet();wl.push(i+1);for(let c=0;c<w.n;c++)st[c].children[ln[c]].classList.add('hit')}});
+bal+=tot;upd();
+$('smsg').textContent=tot?`WYGRANA +${tot.toLocaleString('pl-PL')}  (linie: ${wl.join(', ')})`:'Brak wygranej – spróbuj jeszcze raz!';
+}
+sBusy=false;['sspin','stest'].forEach(i=>$(i).disabled=false);
+}
+addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();sSpin()}});
+
+buildSlots();
+</script></body></html>

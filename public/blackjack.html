@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="pl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Blackjack — Golden Ace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1923; --bg-2:#141f2b; --panel:#1a2733; --panel-2:#213743;
+  --border:#2f4553; --border-2:#3d5666;
+  --text:#ffffff; --muted:#8a9fb2; --muted-2:#b1bad3;
+  --accent:#f0b90b; --accent-2:#ffd54a;
+  --green:#00e701; --red:#ff4d4d;
+  --radius:12px; --radius-lg:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  min-height:100vh;color:var(--text);
+  font-family:'Manrope',system-ui,-apple-system,sans-serif;font-weight:500;
+  background:var(--bg);
+  background-image:
+    radial-gradient(1200px 600px at 50% -10%, #1e3446 0%, transparent 60%),
+    radial-gradient(900px 500px at 100% 100%, #16232f 0%, transparent 50%);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+h1,h2,h3{font-family:'Manrope',sans-serif;font-weight:800;margin:0;letter-spacing:-0.025em}
+.hide{display:none!important}
+.icon{width:1em;height:1em;display:inline-block;vertical-align:-0.14em;flex-shrink:0;stroke-width:1.8}
+
+/* ============ HEADER ============ */
+header{
+  position:sticky;top:0;z-index:50;
+  display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:14px 24px;
+  background:rgba(15,25,35,.85);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-0.02em;text-decoration:none}
+.brand-logo{width:24px;height:24px;color:var(--accent);flex-shrink:0}
+.brand span{color:var(--text);font-weight:600}
+.brand b{color:var(--accent);font-weight:800}
+.hgroup{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.who{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--muted-2);font-weight:600}
+.who .icon{width:15px;height:15px;color:var(--muted)}
+.bal{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:10px;padding:8px 14px;font-weight:700;font-size:14px;
+  color:var(--muted-2);font-variant-numeric:tabular-nums;
+}
+.bal .icon{width:15px;height:15px;color:var(--accent)}
+.bal span{color:var(--accent-2);font-weight:800}
+
+/* ============ BUTTONS ============ */
+button{
+  font:inherit;font-weight:700;font-size:14px;
+  cursor:pointer;border-radius:10px;
+  border:1px solid var(--border);
+  background:var(--panel);color:var(--text);
+  padding:10px 16px;transition:.15s;
+  display:inline-flex;align-items:center;gap:8px;justify-content:center;
+}
+button:hover:not(:disabled){border-color:var(--border-2);background:var(--panel-2)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button .icon{width:16px;height:16px}
+
+/* ============ LAYOUT ============ */
+#game{max-width:960px;margin:0 auto;padding:22px 20px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px}
+.top h2{color:var(--text);font-size:20px;font-weight:800;display:flex;align-items:center;gap:10px}
+.top h2 svg{width:20px;height:20px;color:var(--accent)}
+
+/* ============ TABLE ============ */
+.table{
+  position:relative;min-height:470px;padding:20px 16px;
+  border:1px solid var(--border-2);border-radius:20px;
+  background:
+    radial-gradient(ellipse at 50% 30%, #0f6b3d 0%, #083d23 65%, #04231a 100%);
+  box-shadow:
+    inset 0 0 60px #0008,
+    0 30px 60px -25px #000c;
+  text-align:center;
+}
+.arc{
+  font:700 11px 'Manrope',sans-serif;letter-spacing:.22em;
+  color:rgba(240,185,11,.85);margin-bottom:10px;text-transform:uppercase;
+}
+.zone{margin-bottom:8px}
+.lbl{font-size:11px;letter-spacing:.2em;color:var(--muted-2);text-transform:uppercase;font-weight:700;margin-bottom:6px}
+.cards{display:flex;justify-content:center;min-height:112px;padding-left:36px}
+#hands{display:flex;gap:26px;justify-content:center;flex-wrap:wrap}
+.hand{padding:8px 10px;border-radius:14px;border:2px solid transparent;transition:.2s}
+.hand.act{border-color:var(--accent);background:rgba(240,185,11,.08);box-shadow:0 0 18px rgba(240,185,11,.5)}
+.badge{
+  display:inline-block;min-width:34px;padding:3px 12px;margin-bottom:6px;
+  border-radius:14px;background:rgba(0,0,0,.6);border:1px solid var(--accent);
+  font-weight:800;color:var(--accent-2);font-variant-numeric:tabular-nums;
+}
+.hb{font-size:12px;color:var(--muted-2);margin-top:6px;font-weight:600}
+#dval{
+  display:inline-block;background:rgba(0,0,0,.55);border:1px solid var(--accent);
+  border-radius:12px;padding:1px 10px;margin-left:6px;
+  font-weight:800;color:var(--accent-2);letter-spacing:0;
+  font-variant-numeric:tabular-nums;
+}
+#msg{
+  min-height:44px;margin:14px 0;font:800 22px 'Manrope',sans-serif;
+  color:var(--text);letter-spacing:-0.02em;
+  text-shadow:0 2px 6px rgba(0,0,0,.6);
+}
+
+/* ============ CARDS ============ */
+.card{
+  position:relative;width:74px;height:106px;margin-left:-36px;border-radius:9px;
+  background:#fff;color:#111;box-shadow:0 4px 10px rgba(0,0,0,.55);
+  border:1px solid #ccc;font:700 17px Georgia,serif;
+}
+.card.red{color:#c0182b}
+.card i{position:absolute;left:7px;top:5px;font-style:normal;line-height:1.05;text-align:center}
+.card i.br{left:auto;top:auto;right:7px;bottom:5px;transform:rotate(180deg)}
+.card b{position:absolute;inset:0;display:grid;place-items:center;font-size:40px;font-weight:400}
+.card.back{
+  background:
+    repeating-linear-gradient(45deg, #1a2733 0 6px, #0f1923 6px 12px);
+  border:4px solid var(--accent);
+}
+.card.new{animation:dealin .35s ease-out}
+.card.flip{animation:flip .45s ease-out}
+@keyframes dealin{from{transform:translate(220px,-160px) rotate(25deg);opacity:0}}
+@keyframes flip{from{transform:rotateY(90deg)}}
+
+/* ============ PANEL ============ */
+.panel{
+  margin-top:20px;padding:18px;background:var(--panel);
+  border:1px solid var(--border);border-radius:var(--radius-lg);
+  text-align:center;
+}
+.chips,.acts{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.acts:last-child,.chips:last-child{margin-bottom:0}
+.ch{
+  width:54px;height:54px;border-radius:50%;
+  border:3px solid rgba(255,255,255,.85);padding:0;color:#fff;font-weight:900;font-size:13px;
+  box-shadow:0 6px 12px rgba(0,0,0,.4),inset 0 -4px 8px rgba(0,0,0,.35);
+  transition:.15s;
+}
+.ch:hover:not(:disabled){transform:translateY(-3px);filter:brightness(1.15);color:#fff;background:inherit}
+#deal{
+  background:linear-gradient(180deg,var(--accent-2),var(--accent));
+  color:#1a1500;font-size:15px;padding:12px 36px;letter-spacing:.08em;
+  border-color:var(--accent);font-weight:800;
+}
+#deal:hover:not(:disabled){filter:brightness(1.1);background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1a1500}
+.stake{font-size:14px;color:var(--muted-2);font-weight:600}
+.stake b{color:var(--accent-2);font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+
+@media(max-width:600px){
+  header{padding:12px 16px}
+  .brand{font-size:15px}
+  #game{padding:16px 12px}
+  .panel{padding:14px}
+  .ch{width:46px;height:46px;font-size:12px}
+  #msg{font-size:18px}
+  .card{width:64px;height:92px;margin-left:-30px;font-size:15px}
+  .card b{font-size:34px}
+}
+</style></head><body>
+
+<header>
+  <a href="/" class="brand">
+    <svg class="brand-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+      <path d="M6 3h12l3 6-9 12L3 9z"/>
+      <path d="M3 9h18M9 3l-1 6 4 12M15 3l1 6-4 12"/>
+    </svg>
+    <span><b>GOLDEN</b> ACE</span>
+  </a>
+  <div class="hgroup">
+    <span class="who">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>
+      </svg>
+      <span id="who">—</span>
+    </span>
+    <div class="bal">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5" stroke-dasharray="2 2.5"/>
+      </svg>
+      <span id="bal">1000</span>
+    </div>
+    <button onclick="location.href='/'">Wyloguj</button>
+  </div>
+</header>
+
+<main id="game">
+<div class="top">
+  <a href="/" style="text-decoration:none"><button>
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 12H5M12 19l-7-7 7-7"/>
+    </svg>
+    Lobby
+  </button></a>
+  <h2>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="11" height="15" rx="2" transform="rotate(-8 8.5 11.5)"/>
+      <rect x="10" y="5" width="11" height="15" rx="2" transform="rotate(8 15.5 12.5)"/>
+    </svg>
+    Blackjack
+  </h2>
+  <span style="width:80px"></span>
+</div>
+
+<div class="table">
+<div class="arc">BLACKJACK WYPŁACA 3 : 2 · KRUPIER STOI NA 17</div>
+<div class="zone"><div class="lbl">KRUPIER<span id="dval"></span></div><div class="cards" id="dealer"></div></div>
+<div id="msg">Postaw zakład i rozdaj karty</div>
+<div id="hands"></div>
+</div>
+
+<div class="panel">
+<div id="betbar">
+<div class="chips" id="chips"></div>
+<div class="acts"><button id="clr" onclick="clr()">Wyczyść</button><span class="stake">Stawka: <b id="stake">0</b></span><button id="deal" onclick="deal()">ROZDAJ</button></div>
+</div>
+<div id="actbar" class="acts hide">
+<button id="bHit" onclick="hit()">Dobierz</button>
+<button id="bStand" onclick="stand()">Pas</button>
+<button id="bDbl" onclick="dbl()">Podwój</button>
+<button id="bSplit" onclick="split()">Rozdziel</button>
+</div>
+</div>
+</main>
+
+<script>
+const $=id=>document.getElementById(id),sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const SU=['♠','♥','♦','♣'],RK=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const CHIPC={5:'#c0182b',10:'#1d5fbf',25:'#0a8a3f',100:'#2a2a2a',500:'#7b2cbf'};
+let bal=1000,stake=10,shoe=[],dealer=[],hands=[],cur=0,phase='bet',busy=false;
+
+function newShoe(){shoe=[];for(let d=0;d<6;d++)for(const s of SU)for(const r of RK)shoe.push({r,s});
+for(let i=shoe.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[shoe[i],shoe[j]]=[shoe[j],shoe[i]]}}
+const draw=()=>{const c=shoe.pop();c.anim=true;return c};
+const cval=c=>c.r==='A'?11:'10JQK'.includes(c.r)?10:+c.r;
+function val(cs,all){let t=0,a=0;for(const c of cs){if(c.hidden&&!all)continue;t+=cval(c);if(c.r==='A')a++}
+while(t>21&&a){t-=10;a--}return t}
+const bj=cs=>cs.length===2&&val(cs,true)===21;
+
+function cardHTML(c){
+if(c.hidden)return `<div class="card back ${c.anim?'new':''}"></div>`;
+const red=c.s==='♥'||c.s==='♦';
+return `<div class="card ${red?'red':''} ${c.anim?'new':''} ${c.flip?'flip':''}"><i>${c.r}<br>${c.s}</i><b>${c.s}</b><i class="br">${c.r}<br>${c.s}</i></div>`;
+}
+function render(){
+$('bal').textContent=bal;$('stake').textContent=stake;
+$('dealer').innerHTML=dealer.map(cardHTML).join('');
+$('dval').textContent=dealer.length?val(dealer):'';
+$('hands').innerHTML=hands.map((h,i)=>`<div class="hand ${phase==='play'&&i===cur&&hands.length>1?'act':''}"><div class="badge">${val(h.cards)}${h.result?' · '+h.result:''}</div><div class="cards">${h.cards.map(cardHTML).join('')}</div><div class="hb">Stawka: ${h.bet}</div></div>`).join('');
+[...dealer,...hands.flatMap(h=>h.cards)].forEach(c=>{c.anim=false;c.flip=false});
+const play=phase==='play'&&!busy,h=hands[cur];
+$('betbar').classList.toggle('hide',phase==='play'||phase==='dealer');
+$('actbar').classList.toggle('hide',!(phase==='play'||phase==='dealer'));
+$('bHit').disabled=!play;$('bStand').disabled=!play;
+$('bDbl').disabled=!(play&&h.cards.length===2&&bal>=h.bet);
+$('bSplit').disabled=!(play&&hands.length===1&&h.cards.length===2&&cval(h.cards[0])===cval(h.cards[1])&&bal>=h.bet);
+$('chips').innerHTML=[5,10,25,100,500].map(v=>`<button class="ch" style="background:${CHIPC[v]}" onclick="addChip(${v})">${v}</button>`).join('');
+$('deal').disabled=busy||stake<=0||stake>bal;$('clr').disabled=busy;
+}
+function addChip(v){if(busy)return;if(stake+v>bal){$('msg').textContent='Za mało żetonów!';return}if(phase==='end'){phase='bet'}stake+=v;render()}
+function clr(){stake=0;render()}
+
+async function deal(){
+if(busy||stake<=0||stake>bal)return;
+busy=true;if(shoe.length<80)newShoe();
+bal-=stake;dealer=[];hands=[{cards:[],bet:stake}];cur=0;phase='play';$('msg').textContent='';render();
+hands[0].cards.push(draw());render();await sleep(320);
+dealer.push(draw());render();await sleep(320);
+hands[0].cards.push(draw());render();await sleep(320);
+const hc=draw();hc.hidden=true;dealer.push(hc);render();await sleep(400);
+const up=dealer[0],peek=up.r==='A'||cval(up)===10;
+if(bj(hands[0].cards)||(peek&&bj(dealer,true))){await dealerTurn(true);return}
+busy=false;render();
+}
+async function hit(){
+if(busy||phase!=='play')return;busy=true;const h=hands[cur];
+h.cards.push(draw());render();await sleep(400);
+if(val(h.cards)>=21)await advance();else{busy=false;render()}
+}
+async function stand(){if(busy||phase!=='play')return;busy=true;await advance()}
+async function dbl(){
+if(busy||phase!=='play')return;busy=true;const h=hands[cur];
+bal-=h.bet;h.bet*=2;h.cards.push(draw());render();await sleep(500);await advance();
+}
+async function split(){
+if(busy||phase!=='play')return;busy=true;const h=hands[0];
+bal-=h.bet;hands.push({cards:[h.cards.pop()],bet:h.bet});render();await sleep(300);
+h.cards.push(draw());render();await sleep(400);
+hands[1].cards.push(draw());render();await sleep(400);
+if(val(h.cards)===21)await advance();else{busy=false;render()}
+}
+async function advance(){
+if(cur<hands.length-1){cur++;render();await sleep(300);
+if(val(hands[cur].cards)===21)return advance();
+busy=false;render();
+}else await dealerTurn(false);
+}
+async function dealerTurn(natural){
+busy=true;phase='dealer';render();await sleep(400);
+dealer[1].hidden=false;dealer[1].flip=true;render();await sleep(700);
+const live=!natural&&hands.some(h=>val(h.cards)<=21);
+if(live)while(val(dealer)<17){dealer.push(draw());render();await sleep(700)}
+settle();
+}
+function settle(){
+const d=val(dealer),dbj=bj(dealer);let total=0,bets=0;
+hands.forEach(h=>{
+const p=val(h.cards),pbj=hands.length===1&&bj(h.cards);let pay=0,r='Przegrana';
+if(p>21)r='Przegrana (bust)';
+else if(pbj&&!dbj){pay=h.bet*2.5;r='BLACKJACK 3:2'}
+else if(dbj&&!pbj)r='Przegrana';
+else if(d>21||p>d){pay=h.bet*2;r='Wygrana'}
+else if(p===d){pay=h.bet;r='Remis'}
+h.result=r;total+=pay;bets+=h.bet;
+});
+bal+=total;const net=total-bets;
+phase='end';busy=false;
+let m=net>0?`Wygrywasz +${net}`:net<0?`Przegrywasz −${-net}`:'Remis – stawka wraca';
+if(dealer.length&&val(dealer)>21)m='Krupier przekroczył 21! '+m;
+if(stake>bal)stake=bal;
+if(bal<=0){bal=1000;stake=10;m+=' · Bankructwo! Nowe 1000 żetonów.'}
+$('msg').textContent=m;render();
+}
+newShoe();render();
+</script></body></html>

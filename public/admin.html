@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="pl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Panel administratora — Golden Ace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1923;
+  --bg-2:#141f2b;
+  --panel:#1a2733;
+  --panel-2:#213743;
+  --border:#2f4553;
+  --border-2:#3d5666;
+  --text:#ffffff;
+  --muted:#8a9fb2;
+  --muted-2:#b1bad3;
+  --accent:#f0b90b;
+  --accent-2:#ffd54a;
+  --green:#00e701;
+  --red:#ff4d4d;
+  --radius:12px;
+  --radius-lg:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  min-height:100vh;color:var(--text);
+  font-family:'Manrope',system-ui,-apple-system,sans-serif;
+  font-weight:500;
+  background:var(--bg);
+  background-image:
+    radial-gradient(1200px 600px at 50% -10%, #1e3446 0%, transparent 60%),
+    radial-gradient(900px 500px at 100% 100%, #16232f 0%, transparent 50%);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  padding:24px;
+  padding-top:calc(24px + env(safe-area-inset-top,0px));
+  padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));
+}
+h1,h2,h3{font-family:'Manrope',sans-serif;font-weight:800;margin:0;letter-spacing:-0.025em}
+
+/* ============ ICONS ============ */
+.icon{width:1em;height:1em;display:inline-block;vertical-align:-0.14em;flex-shrink:0;stroke-width:1.8}
+
+/* ============ BUTTONS ============ */
+button{
+  font:inherit;font-weight:700;font-size:13px;
+  cursor:pointer;border-radius:10px;
+  border:1px solid var(--border);
+  background:var(--panel);color:var(--text);
+  padding:9px 14px;transition:.15s;
+  display:inline-flex;align-items:center;gap:7px;
+  justify-content:center;white-space:nowrap;
+}
+button:hover:not(:disabled){border-color:var(--border-2);background:var(--panel-2)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button .icon{width:14px;height:14px}
+button.primary{
+  background:linear-gradient(180deg,var(--accent-2),var(--accent));
+  border-color:var(--accent);color:#1a1500;
+}
+button.primary:hover:not(:disabled){filter:brightness(1.08)}
+button.danger{border-color:rgba(255,77,77,.4);color:#ff9a9a;background:rgba(255,77,77,.06)}
+button.danger:hover:not(:disabled){background:rgba(255,77,77,.15);border-color:var(--red);color:#ffc0c0}
+button.green{border-color:rgba(0,231,1,.35);color:#5df08a;background:rgba(0,231,1,.06)}
+button.green:hover:not(:disabled){background:rgba(0,231,1,.14);border-color:var(--green)}
+button.small{padding:5px 9px;font-size:11px;border-radius:8px}
+button.small .icon{width:12px;height:12px}
+
+/* ============ INPUTS ============ */
+input{
+  width:100%;padding:12px 14px;
+  border-radius:10px;border:1px solid var(--border);
+  background:var(--bg);color:var(--text);font:inherit;font-size:14px;font-weight:500;
+  transition:.15s;
+}
+input:focus{outline:none;border-color:var(--accent);background:var(--bg-2)}
+input::placeholder{color:var(--muted)}
+
+/* ============ LOGIN ============ */
+#login{
+  max-width:400px;margin:12vh auto;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:32px 28px;
+  box-shadow:0 30px 60px -20px #000a;
+}
+.login-brand{
+  display:flex;justify-content:center;align-items:center;gap:10px;
+  margin-bottom:6px;
+}
+.login-brand svg{width:28px;height:28px;color:var(--accent)}
+#login h1{font-size:22px;text-align:center;color:var(--text);letter-spacing:-0.02em}
+#login p.tip{
+  text-align:center;color:var(--muted);font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;margin:8px 0 22px;font-weight:600;
+}
+#login input{margin-bottom:12px}
+#login button{width:100%;padding:13px;font-size:15px}
+#msg{min-height:20px;text-align:center;color:var(--red);font-size:13px;margin-top:10px;font-weight:600}
+
+/* ============ PANEL ============ */
+.wrap{max-width:1280px;margin:0 auto}
+.panel-head{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  gap:16px;flex-wrap:wrap;margin-bottom:24px;
+}
+.panel-title{
+  display:flex;align-items:center;gap:12px;
+}
+.panel-title svg{width:26px;height:26px;color:var(--accent);flex-shrink:0}
+.panel-title h1{font-size:22px;color:var(--text)}
+.panel-title p{margin:4px 0 0;font-size:13px;color:var(--muted);font-weight:500}
+.panel-title .meta{
+  display:flex;align-items:center;gap:8px;margin-top:6px;
+  font-size:12px;color:var(--muted-2);font-weight:600;
+}
+.panel-title .meta .live-dot{
+  width:6px;height:6px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 8px var(--green);display:inline-block;
+  animation:pulse-dot 1.6s ease-in-out infinite;
+}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.35}}
+.panel-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ============ STATS GRID ============ */
+.stats{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:12px;margin-bottom:22px;
+}
+.stat{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:18px 20px;
+}
+.stat-lbl{
+  font-size:11px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;
+  font-weight:700;margin-bottom:8px;
+}
+.stat-val{
+  font-size:24px;font-weight:800;letter-spacing:-0.02em;color:var(--text);
+  font-variant-numeric:tabular-nums;
+}
+.stat-val.accent{color:var(--accent-2)}
+.stat-val.green{color:var(--green)}
+
+/* ============ TABLE ============ */
+.table-wrap{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  overflow:hidden;
+}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{
+  padding:14px 16px;border-bottom:1px solid var(--border);text-align:left;
+  white-space:nowrap;
+}
+th{
+  color:var(--muted);font-size:11px;text-transform:uppercase;
+  letter-spacing:.1em;font-weight:700;background:var(--bg-2);
+}
+tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--panel-2)}
+td.n{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;color:var(--muted-2)}
+td.bal{color:var(--accent-2);font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+td.win{color:var(--green);text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+td.user b{color:var(--text);font-weight:700}
+.badge{
+  display:inline-block;padding:3px 9px;border-radius:8px;
+  background:rgba(240,185,11,.1);border:1px solid rgba(240,185,11,.25);
+  color:var(--accent);font-size:11px;font-weight:700;
+  font-variant-numeric:tabular-nums;
+}
+.badge.none{
+  background:transparent;border-color:var(--border);color:var(--muted);
+}
+.acts{display:flex;gap:5px;flex-wrap:wrap}
+
+.empty{
+  padding:44px;text-align:center;color:var(--muted);
+  font-size:14px;font-weight:500;
+}
+
+/* ============ MESSAGES ============ */
+#msg2{
+  min-height:22px;text-align:center;font-size:13px;font-weight:600;
+  margin-top:16px;color:var(--green);
+}
+
+/* ============ TOAST ============ */
+#toast{
+  position:fixed;left:50%;bottom:32px;transform:translate(-50%,24px);
+  background:var(--panel-2);color:var(--text);
+  border:1px solid var(--border-2);border-radius:12px;
+  padding:14px 22px;font-weight:700;font-size:14px;
+  opacity:0;pointer-events:none;transition:.28s;z-index:200;
+  max-width:90vw;text-align:center;
+  box-shadow:0 20px 40px -15px #000c;
+  display:flex;align-items:center;gap:10px;
+}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#toast .icon{color:var(--green);width:18px;height:18px}
+#toast.err .icon{color:var(--red)}
+
+.hide{display:none!important}
+
+/* ============ RESPONSIVE ============ */
+@media(max-width:900px){
+  body{padding:16px}
+  .table-wrap{overflow-x:auto}
+  table{min-width:900px}
+  .panel-head{flex-direction:column;align-items:stretch}
+  .panel-actions{width:100%}
+  .panel-actions button{flex:1}
+}
+@media(max-width:600px){
+  .panel-title h1{font-size:18px}
+  .stat-val{font-size:20px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+}
+</style></head><body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login">
+  <div class="login-brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2"/>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>
+  </div>
+  <h1>Panel administratora</h1>
+  <p class="tip">Dostęp tylko dla administratora</p>
+  <input id="key" type="password" placeholder="Hasło administratora" autocomplete="current-password">
+  <button class="primary" onclick="login()">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+      <path d="M10 17l5-5-5-5M15 12H3"/>
+    </svg>
+    Wejdź
+  </button>
+  <div id="msg"></div>
+</div>
+
+<!-- ============ PANEL ============ -->
+<div id="panel" class="hide wrap">
+  <div class="panel-head">
+    <div class="panel-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2l9 4v6c0 5-3.5 9.5-9 10-5.5-.5-9-5-9-10V6l9-4z"/>
+        <path d="M9 12l2 2 4-4"/>
+      </svg>
+      <div>
+        <h1>Panel administratora</h1>
+        <div class="meta">
+          <span class="live-dot"></span>
+          <span id="info">Ładowanie…</span>
+        </div>
+      </div>
+    </div>
+    <div class="panel-actions">
+      <button onclick="loadUsers()">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 1 1-3-6.7L21 8"/>
+          <path d="M21 3v5h-5"/>
+        </svg>
+        Odśwież
+      </button>
+      <button onclick="location.href='/'">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12l9-9 9 9M5 10v10h14V10"/>
+        </svg>
+        Strona główna
+      </button>
+      <button class="danger" onclick="logout()">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <path d="M16 17l5-5-5-5M21 12H9"/>
+        </svg>
+        Wyloguj
+      </button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-lbl">Kont łącznie</div>
+      <div class="stat-val" id="sTotal">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-lbl">Żetony w obiegu</div>
+      <div class="stat-val accent" id="sBalance">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-lbl">Łączny obrót</div>
+      <div class="stat-val" id="sWagered">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-lbl">Łącznie spinów</div>
+      <div class="stat-val green" id="sSpins">—</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Gracz</th>
+        <th style="text-align:right">Saldo</th>
+        <th style="text-align:right">Najw. wygrana</th>
+        <th style="text-align:right">Obrót</th>
+        <th style="text-align:right">Spiny</th>
+        <th>Bonus</th>
+        <th>Akcje</th>
+      </tr></thead>
+      <tbody id="rows">
+        <tr><td colspan="7" class="empty">Ładowanie…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="msg2"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let key = sessionStorage.getItem('ga_admin') || '';
+const $ = id => document.getElementById(id);
+const fmt = n => Number(n).toLocaleString('pl-PL');
+
+async function call(path, method='GET', body){
+  const h = { 'Content-Type':'application/json', 'x-admin-key': key };
+  const r = await fetch(path, { method, headers:h, body: body?JSON.stringify(body):undefined });
+  let d = null; try{ d = await r.json(); }catch(e){}
+  return { ok:r.ok, status:r.status, data:d };
+}
+
+/* ---------- TOAST ---------- */
+let toastT;
+function toast(msg, isError){
+  const t = $('toast');
+  t.className = isError ? 'err' : '';
+  t.innerHTML = `
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      ${isError
+        ? '<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>'
+        : '<path d="M20 6L9 17l-5-5"/>'}
+    </svg>
+    <span></span>`;
+  t.querySelector('span').textContent = msg;
+  t.classList.add('on');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove('on'), 2800);
+}
+
+/* ---------- LOGIN ---------- */
+function login(){
+  key = $('key').value;
+  sessionStorage.setItem('ga_admin', key);
+  loadUsers().then(ok => {
+    if (!ok) $('msg').textContent = 'Błędne hasło';
+  });
+}
+
+function logout(){
+  sessionStorage.removeItem('ga_admin');
+  key = '';
+  $('panel').classList.add('hide');
+  $('login').classList.remove('hide');
+  $('key').value = '';
+  $('msg').textContent = '';
+}
+
+/* ---------- LOAD ---------- */
+async function loadUsers(){
+  const r = await call('/api/admin/users');
+  if (!r.ok){
+    $('panel').classList.add('hide');
+    $('login').classList.remove('hide');
+    $('msg').textContent = r.data?.error || 'Błąd logowania';
+    return false;
+  }
+  $('login').classList.add('hide');
+  $('panel').classList.remove('hide');
+
+  const list = r.data;
+  $('info').textContent = list.length === 1
+    ? '1 konto'
+    : `${list.length} kont`;
+
+  // Statystyki
+  let totalBal = 0, totalWag = 0, totalSpins = 0;
+  list.forEach(u => {
+    totalBal   += u.balance      || 0;
+    totalWag   += u.totalWagered || 0;
+    totalSpins += u.spins        || 0;
+  });
+  $('sTotal').textContent   = fmt(list.length);
+  $('sBalance').textContent = fmt(totalBal);
+  $('sWagered').textContent = fmt(totalWag);
+  $('sSpins').textContent   = fmt(totalSpins);
+
+  render(list);
+  return true;
+}
+
+/* ---------- RENDER ---------- */
+function render(list){
+  if (!list.length){
+    $('rows').innerHTML = '<tr><td colspan="7" class="empty">Brak kont</td></tr>';
+    return;
+  }
+  $('rows').innerHTML = list.map(u => `
+    <tr>
+      <td class="user"><b>${esc(u.username)}</b></td>
+      <td class="bal">${fmt(u.balance)}</td>
+      <td class="win">${fmt(u.biggestWin)}</td>
+      <td class="n">${fmt(u.totalWagered)}</td>
+      <td class="n">${fmt(u.spins)}</td>
+      <td>
+        ${u.lastBonus
+          ? `<span class="badge">${formatBonusTime(u.nextBonusAt)}</span>`
+          : '<span class="badge none">dostępny</span>'}
+      </td>
+      <td>
+        <div class="acts">
+          <button class="small green" onclick="adj('${esc(u.username)}', 1000)">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            1k
+          </button>
+          <button class="small green" onclick="adj('${esc(u.username)}', 10000)">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            10k
+          </button>
+          <button class="small danger" onclick="adj('${esc(u.username)}', -1000)">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg>
+            1k
+          </button>
+          <button class="small" onclick="setBal('${esc(u.username)}')">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+            Ustaw
+          </button>
+          <button class="small" onclick="resetBonus('${esc(u.username)}')">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+            Bonus
+          </button>
+          <button class="small" onclick="resetStats('${esc(u.username)}')">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 3v5h5M21 12a9 9 0 1 1-3-6.7"/>
+              <path d="M21 3v5h-5"/>
+            </svg>
+            Statystyki
+          </button>
+          <button class="small danger" onclick="delUser('${esc(u.username)}')">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            </svg>
+            Usuń
+          </button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function formatBonusTime(ts){
+  if (!ts) return '—';
+  const ms = ts - Date.now();
+  if (ms <= 0) return 'dostępny';
+  const total = Math.floor(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(h)}:${pad(m)}`;
+}
+
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function ok(msg){ toast(msg, false); }
+
+/* ---------- ACTIONS ---------- */
+async function adj(username, amount){
+  const r = await call('/api/admin/adjust', 'POST', { username, amount });
+  if (!r.ok) return toast(r.data?.error || 'Błąd', true);
+  ok(`${username}: ${amount>0?'+':''}${fmt(amount)} → ${fmt(r.data.balance)}`);
+  loadUsers();
+}
+
+async function setBal(username){
+  const v = prompt(`Nowe saldo dla ${username}:`);
+  if (v === null) return;
+  const n = parseInt(v, 10);
+  if (!Number.isFinite(n)) return toast('Nieprawidłowa liczba', true);
+  const r = await call('/api/admin/adjust', 'POST', { username, setBalance: n });
+  if (!r.ok) return toast(r.data?.error || 'Błąd', true);
+  ok(`${username}: saldo = ${fmt(r.data.balance)}`);
+  loadUsers();
+}
+
+async function resetBonus(username){
+  const r = await call('/api/admin/reset-bonus', 'POST', { username });
+  if (!r.ok) return toast(r.data?.error || 'Błąd', true);
+  ok(`${username}: bonus zresetowany`);
+  loadUsers();
+}
+
+async function resetStats(username){
+  if (!confirm(`Zresetować statystyki gracza ${username}?`)) return;
+  const r = await call('/api/admin/reset-stats', 'POST', { username });
+  if (!r.ok) return toast(r.data?.error || 'Błąd', true);
+  ok(`${username}: statystyki zresetowane`);
+  loadUsers();
+}
+
+async function delUser(username){
+  if (!confirm(`USUNĄĆ konto ${username}? Tego nie można cofnąć.`)) return;
+  const r = await call('/api/admin/delete', 'POST', { username });
+  if (!r.ok) return toast(r.data?.error || 'Błąd', true);
+  ok(`Konto ${username} usunięte`);
+  loadUsers();
+}
+
+/* ---------- INIT ---------- */
+if (key) loadUsers();
+$('key').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+</script></body></html>
