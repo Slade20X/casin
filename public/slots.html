@@ -185,6 +185,7 @@ button .icon{width:16px;height:16px}
 </header>
 
 <audio id="spinSound" src="https://files.catbox.moe/sftm19.MP3" preload="auto"></audio>
+<audio id="stopSound" src="https://files.catbox.moe/7cmc2n.MP3" preload="auto"></audio>
 
 <section id="slots">
 <div class="top">
@@ -315,6 +316,18 @@ snd.currentTime = 0;
 snd.volume = 0.6;      // 0.0 – 1.0, dopasuj do gustu
 snd.play().catch(()=>{});   // catch = ignoruj błąd autoplay
 
+/* dźwięk stopni dla każdego bębna */
+const stopSnd = $('stopSound');
+const stops = [1.70, 2.09, 2.48, 2.87, 3.26].map(t =>
+  setTimeout(() => {
+    try {
+      stopSnd.currentTime = 0;
+      stopSnd.volume = 0.5;          // dopasuj do gustu
+      stopSnd.play().catch(()=>{});
+    } catch(e){}
+  }, t * 1000)
+);
+
 const st=strips(),H=document.querySelector('.reel').clientHeight/3;
 st.forEach((el,c)=>{
   /* nowy wynik NA GÓRZE, losowe w środku, stary wynik NA DOLE */
@@ -370,6 +383,8 @@ upd();
 
 snd.pause();
 snd.currentTime = 0;
+
+stops.forEach(clearTimeout);
 
 sBusy=false;
 ['sspin','stest'].forEach(i=>$(i).disabled=false);
