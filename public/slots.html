@@ -184,6 +184,8 @@ button .icon{width:16px;height:16px}
   </div>
 </header>
 
+<audio id="spinSound" src="/spin.mp3" preload="auto"></audio>
+
 <section id="slots">
 <div class="top">
   <a href="/" style="text-decoration:none"><button>
@@ -308,13 +310,18 @@ sBusy=true;
 ['sspin','stest'].forEach(i=>$(i).disabled=true);
 $('smsg').textContent='Kręcimy…';
 
+const snd = $('spinSound');
+snd.currentTime = 0;
+snd.volume = 0.6;      // 0.0 – 1.0, dopasuj do gustu
+snd.play().catch(()=>{});   // catch = ignoruj błąd autoplay
+
 const st=strips(),H=document.querySelector('.reel').clientHeight/3;
 st.forEach((el,c)=>{const ids=[...sg[c]];for(let i=0;i<14+c*7;i++)ids.push(rnd());ids.push(...res[c]);
 el.style.transition='none';el.innerHTML=ids.map(cell).join('');el.style.transform='translateY(0)'});
 void document.body.offsetHeight;
 st.forEach((el,c)=>{const n=el.children.length-3;
-el.style.transition=`transform ${1.2+c*.4}s cubic-bezier(.2,.85,.3,1.06)`;el.style.transform=`translateY(${-n*H}px)`});
-await sleep(1200+4*400+200);
+el.style.transition=`transform ${1.7+c*.39}s cubic-bezier(.2,.85,.3,1.06)`;el.style.transform=`translateY(${-n*H}px)`});
+await sleep(3460);
 st.forEach((el,c)=>{el.style.transition='none';el.innerHTML=res[c].map(cell).join('');el.style.transform='translateY(0)'});
 
 sg=res;
@@ -351,6 +358,9 @@ if(isJackpot){
 if(srvUser) bal = srvUser.balance;
 else if(test!==true) bal -= cost;  // awaryjnie, choć nie powinno się zdarzyć
 upd();
+
+snd.pause();
+snd.currentTime = 0;
 
 sBusy=false;
 ['sspin','stest'].forEach(i=>$(i).disabled=false);
