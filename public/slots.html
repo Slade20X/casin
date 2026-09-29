@@ -316,14 +316,23 @@ snd.volume = 0.6;      // 0.0 – 1.0, dopasuj do gustu
 snd.play().catch(()=>{});   // catch = ignoruj błąd autoplay
 
 const st=strips(),H=document.querySelector('.reel').clientHeight/3;
-st.forEach((el,c)=>{const ids=[...sg[c]];for(let i=0;i<14+c*7;i++)ids.push(rnd());ids.push(...res[c]);
-el.style.transition='none';el.innerHTML=ids.map(cell).join('');el.style.transform='translateY(0)'});
+st.forEach((el,c)=>{
+  /* nowy wynik NA GÓRZE, losowe w środku, stary wynik NA DOLE */
+  const ids=[...res[c]];
+  for(let i=0;i<14+c*7;i++)ids.push(rnd());
+  ids.push(...sg[c]);
+  el.style.transition='none';
+  el.innerHTML=ids.map(cell).join('');
+  const n=ids.length-3;
+  el.style.transform=`translateY(${-n*H}px)`;   // start: pokaż stary (na dole)
+});
 void document.body.offsetHeight;
-st.forEach((el,c)=>{const n=el.children.length-3;
-el.style.transition=`transform ${1.7+c*.39}s cubic-bezier(.2,.85,.3,1.06)`;el.style.transform=`translateY(${-n*H}px)`});
+st.forEach((el,c)=>{
+  el.style.transition=`transform ${1.7+c*.39}s cubic-bezier(.2,.85,.3,1.06)`;
+  el.style.transform='translateY(0)';            // koniec: pokaż nowy (na górze)
+});
 await sleep(3460);
 st.forEach((el,c)=>{el.style.transition='none';el.innerHTML=res[c].map(cell).join('');el.style.transform='translateY(0)'});
-
 sg=res;
 
 const isJackpot = (test===true)
