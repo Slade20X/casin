@@ -1,19 +1,20 @@
 /* =========================================================
-   GOLDEN ACE CASINO — backend v4 (ruletka + sloty)
+   GOLDEN ACE CASINO — backend v5 (ruletka + sloty, Redis)
    ========================================================= */
 const express = require('express');
-const fs      = require('fs');
 const path    = require('path');
 const crypto  = require('crypto');
 const bcrypt  = require('bcryptjs');
+const { Redis } = require('@upstash/redis');
 
 const app            = express();
 const PORT           = process.env.PORT || 3000;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'slade2134';
-const DATA_FILE      = path.join(__dirname, 'data.json');
 const START_BALANCE  = 1000;
 const DAILY_BONUS    = 10000;
 const BONUS_COOLDOWN = 24 * 60 * 60 * 1000;
+
+const redis = Redis.fromEnv(); // czyta UPSTASH_REDIS_REST_URL / _TOKEN
 
 app.use(express.json({ limit: '64kb' }));
 app.use((req, res, next) => {
@@ -23,19 +24,33 @@ app.use((req, res, next) => {
 app.disable('x-powered-by');
 app.use(express.static(path.join(__dirname, 'public')));
 
-/* ---------------- baza ---------------- */
+/* ---------------- baza (Redis) ---------------- */
 let db = { users: {}, sessions: {} };
-if (fs.existsSync(DATA_FILE)) {
-  try { db = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); }
-  catch (e) { console.error('Nie udało się wczytać data.json:', e.message); }
-}
-db.users    = db.users    || {};
-db.sessions = db.sessions || {};
 
-function save() {
-  try { fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 2)); }
-  catch (e) { console.error('Błąd zapisu data.json:', e.message); }
+async function loadDb() {
+  try {
+    const raw = await redis.get('casino:db');
+    if (raw) db = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  } catch (e) {
+    console.error('Redis load error:', e.message);
+  }
+  db.users    = db.users    || {};
+  db.sessions = db.sessions || {};
 }
+
+async function save() {
+  try {
+    await redis.set('casino:db', db);
+  } catch (e) {
+    console.error('Redis save error:', e.message);
+  }
+}
+
+// Ładuj DB przy każdym żądaniu API (serverless = brak wspólnej pamięci)
+app.use('/api', async (req, res, next) => {
+  await loadDb();
+  next();
+});
 
 /* ---------------- bonus ---------------- */
 function nextBonusAt(u){
@@ -159,7 +174,7 @@ app.post('/api/register', async (req, res) => {
   };
   const token = crypto.randomBytes(24).toString('hex');
   db.sessions[token] = key;
-  save();
+  await save();
   res.json({ token, user: pub(db.users[key]) });
 });
 
@@ -173,21 +188,21 @@ app.post('/api/login', async (req, res) => {
   if (!ok) return res.status(400).json({ error: 'Błędne hasło' });
   const token = crypto.randomBytes(24).toString('hex');
   db.sessions[token] = key;
-  save();
+  await save();
   res.json({ token, user: pub(u) });
 });
 
-app.post('/api/logout', auth, (req, res) => {
+app.post('/api/logout', auth, async (req, res) => {
   const h = req.headers.authorization || '';
   delete db.sessions[h.slice(7)];
-  save();
+  await save();
   res.json({ ok: true });
 });
 
 app.get('/api/me', auth, (req, res) => res.json({ user: pub(req.user) }));
 
 /* ============ BONUS ============ */
-app.post('/api/bonus', auth, (req, res) => {
+app.post('/api/bonus', auth, async (req, res) => {
   const now  = Date.now();
   const next = nextBonusAt(req.user);
   if (next > now) {
@@ -198,12 +213,12 @@ app.post('/api/bonus', auth, (req, res) => {
   }
   req.user.lastBonus = now;
   req.user.balance  += DAILY_BONUS;
-  save();
+  await save();
   res.json({ amount: DAILY_BONUS, user: pub(req.user) });
 });
 
 /* ============ RULETKA ============ */
-app.post('/api/spin', auth, (req, res) => {
+app.post('/api/spin', auth, async (req, res) => {
   const bets = req.body?.bets;
   if (!bets || typeof bets !== 'object')
     return res.status(400).json({ error: 'Brak zakładów' });
@@ -231,12 +246,12 @@ app.post('/api/spin', auth, (req, res) => {
   u.spins        += 1;
   if (win > 0) u.wins += 1;
   if (win > u.biggestWin) u.biggestWin = win;
-  save();
+  await save();
   res.json({ idx, num, win, net: win - stake, user: pub(u) });
 });
 
 /* ============ SLOTY ============ */
-app.post('/api/slots/spin', auth, (req, res) => {
+app.post('/api/slots/spin', auth, async (req, res) => {
   try {
     const bet = Number(req.body?.bet);
     if (!SLOT_BETS.includes(bet))
@@ -274,7 +289,7 @@ app.post('/api/slots/spin', auth, (req, res) => {
     u.spins        += 1;
     if (win > 0) u.wins += 1;
     if (win > u.biggestWin) u.biggestWin = win;
-    save();
+    await save();
 
     res.json({ grid, win, cost, jackpot, winningLines, user: pub(u) });
   } catch (e) {
@@ -298,7 +313,7 @@ app.get('/api/admin/users', adminAuth, (req, res) => {
   list.sort((a,b) => b.balance - a.balance);
   res.json(list);
 });
-app.post('/api/admin/adjust', adminAuth, (req, res) => {
+app.post('/api/admin/adjust', adminAuth, async (req, res) => {
   const username = String(req.body?.username || '').trim().toLowerCase();
   const u = db.users[username];
   if (!u) return res.status(404).json({ error: 'Nie ma takiego użytkownika' });
@@ -308,31 +323,31 @@ app.post('/api/admin/adjust', adminAuth, (req, res) => {
     const amount = Math.floor(Number(req.body.amount) || 0);
     u.balance = Math.max(0, u.balance + amount);
   }
-  save();
+  await save();
   res.json({ username: u.username, balance: u.balance });
 });
-app.post('/api/admin/reset-bonus', adminAuth, (req, res) => {
+app.post('/api/admin/reset-bonus', adminAuth, async (req, res) => {
   const username = String(req.body?.username || '').trim().toLowerCase();
   const u = db.users[username];
   if (!u) return res.status(404).json({ error: 'Nie ma takiego użytkownika' });
   u.lastBonus = null;
-  save();
+  await save();
   res.json({ ok: true });
 });
-app.post('/api/admin/delete', adminAuth, (req, res) => {
+app.post('/api/admin/delete', adminAuth, async (req, res) => {
   const username = String(req.body?.username || '').trim().toLowerCase();
   if (!db.users[username]) return res.status(404).json({ error: 'Nie ma takiego użytkownika' });
   delete db.users[username];
   for (const t in db.sessions) if (db.sessions[t] === username) delete db.sessions[t];
-  save();
+  await save();
   res.json({ ok: true });
 });
-app.post('/api/admin/reset-stats', adminAuth, (req, res) => {
+app.post('/api/admin/reset-stats', adminAuth, async (req, res) => {
   const username = String(req.body?.username || '').trim().toLowerCase();
   const u = db.users[username];
   if (!u) return res.status(404).json({ error: 'Nie ma takiego użytkownika' });
   u.totalWagered = 0; u.totalWon = 0; u.biggestWin = 0; u.spins = 0; u.wins = 0;
-  save();
+  await save();
   res.json({ ok: true });
 });
 
