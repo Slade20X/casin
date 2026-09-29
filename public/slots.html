@@ -186,6 +186,7 @@ button .icon{width:16px;height:16px}
 
 <audio id="spinSound" src="https://files.catbox.moe/sftm19.MP3" preload="auto"></audio>
 <audio id="stopSound" src="https://files.catbox.moe/7cmc2n.MP3" preload="auto"></audio>
+<audio id="bellSound" src="https://files.catbox.moe/elpq2v.MP3" preload="auto"></audio>
 
 <section id="slots">
 <div class="top">
@@ -346,7 +347,11 @@ st.forEach((el,c)=>{
 });
 await sleep(3460);
 st.forEach((el,c)=>{el.style.transition='none';el.innerHTML=res[c].map(cell).join('');el.style.transform='translateY(0)'});
+
 sg=res;
+
+/* policz kolumny z dzwonkami (3 dzwonki = cała kolumna) */
+const bellCols = [0,1,2,3,4].filter(c => res[c].every(x => x === 'bell'));
 
 const isJackpot = (test===true)
   ? [0,1,2,3,4].every(c=>res[c].every(x=>x==='bell'))
@@ -364,6 +369,23 @@ if(isJackpot){
   await sleep(5000);
   ov.querySelectorAll('.coin').forEach(x=>x.remove());ov.classList.add('hide');
 } else {
+  /* ⬇⬇⬇ NOWE: 1-4 dzwonki – animacja + dźwięk ⬇⬇⬇ */
+  if(bellCols.length > 0){
+    await sleep(350);
+    bellCols.forEach(c => {
+      [...st[c].children].forEach(ch => {
+        ch.classList.remove('wx');
+        void ch.offsetWidth;   // reset animacji
+        ch.classList.add('wx');
+      });
+    });
+    const bellSnd = $('bellSound');
+    bellSnd.currentTime = 0;
+    bellSnd.volume = 0.7;
+    bellSnd.play().catch(()=>{});
+    await sleep(400);   // żeby animacja zdążyła się rozegrać
+  }
+
   let tot=0, wl=[];
   LINES.forEach((ln,i)=>{
     const w=evalLine(ln.map((r,c)=>res[c][r]));
