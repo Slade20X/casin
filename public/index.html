@@ -623,5 +623,36 @@ function renderRanking(){
 }
 function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+/* ===================== REFRESH PO POWROCIE ===================== */
+async function refreshMe(){
+  if (!token) return;
+  const r = await api('/api/me');
+  if (!r.ok){
+    if (r.status === 401){
+      localStorage.removeItem('ga_token');
+      location.reload();
+    }
+    return;
+  }
+  me = r.data.user;
+  document.getElementById('bal').textContent = Number(me.balance).toLocaleString('pl-PL');
+  updateBonusBanner();
+  startBonusTimer();
+  // odśwież ranking od razu (żeby twoje saldo w tabeli też było aktualne)
+  loadRanking(true);
+  startRankLoop();
+}
+
+// powrót z innej karty / okna
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') refreshMe();
+});
+window.addEventListener('focus', refreshMe);
+
+// powrót przez przycisk "wstecz" (bfcache)
+window.addEventListener('pageshow', (e) => {
+  if (e.persisted) refreshMe();   // persisted=true => strona wyciągnięta z bfcache
+});
+
 boot();
 </script></body></html>
