@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="pl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Crazy Time — Golden Ace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1923;--bg-2:#141f2b;--panel:#1a2733;--panel-2:#213743;
+  --border:#2f4553;--border-2:#3d5666;
+  --text:#fff;--muted:#8a9fb2;--muted-2:#b1bad3;
+  --accent:#f0b90b;--accent-2:#ffd54a;
+  --green:#00e701;--red:#ff4d4d;
+  --radius:12px;--radius-lg:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  min-height:100vh;color:var(--text);
+  font-family:'Manrope',system-ui,-apple-system,sans-serif;font-weight:500;
+  background:var(--bg);
+  background-image:
+    radial-gradient(1200px 600px at 50% -10%,#1e3446 0%,transparent 60%),
+    radial-gradient(900px 500px at 100% 100%,#16232f 0%,transparent 50%);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+h1,h2,h3{font-family:'Manrope',sans-serif;font-weight:800;margin:0;letter-spacing:-0.025em}
+.hide{display:none!important}
+.icon{width:1em;height:1em;display:inline-block;vertical-align:-.14em;flex-shrink:0;stroke-width:1.8}
+
+header{
+  position:sticky;top:0;z-index:50;
+  display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:14px 24px;
+  background:rgba(15,25,35,.85);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-.02em;text-decoration:none}
+.brand-logo{width:24px;height:24px;color:var(--accent);flex-shrink:0}
+.brand span{color:var(--text);font-weight:600}
+.brand b{color:var(--accent);font-weight:800}
+.hgroup{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.bal{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:10px;padding:8px 14px;font-weight:700;font-size:14px;
+  color:var(--muted-2);font-variant-numeric:tabular-nums;
+}
+.bal .icon{width:15px;height:15px;color:var(--accent)}
+.bal span{color:var(--accent-2);font-weight:800}
+
+button{
+  font:inherit;font-weight:700;font-size:14px;
+  cursor:pointer;border-radius:10px;
+  border:1px solid var(--border);
+  background:var(--panel);color:var(--text);
+  padding:10px 16px;transition:.15s;
+  display:inline-flex;align-items:center;gap:8px;justify-content:center;
+}
+button:hover:not(:disabled){border-color:var(--border-2);background:var(--panel-2)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button .icon{width:16px;height:16px}
+
+#game{max-width:1240px;margin:0 auto;padding:22px 20px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px}
+.top h2{color:var(--text);font-size:20px;font-weight:800;display:flex;align-items:center;gap:10px}
+.top h2 svg{width:20px;height:20px;color:var(--accent)}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:22px;align-items:start}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+
+/* === WHEEL === */
+.wheelcol{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:22px;text-align:center;
+}
+.wheelwrap{position:relative;width:min(100%,520px);margin:0 auto;aspect-ratio:1}
+#wh{width:100%;height:100%;border-radius:50%;box-shadow:0 0 60px rgba(240,185,11,.15),0 0 0 1px var(--border-2);overflow:hidden}
+#wh canvas{width:100%;height:100%;display:block}
+.ptr{
+  position:absolute;left:50%;top:-16px;transform:translateX(-50%);
+  width:0;height:0;border-left:16px solid transparent;border-right:16px solid transparent;
+  border-top:38px solid var(--accent);filter:drop-shadow(0 4px 8px rgba(0,0,0,.8));z-index:5;
+}
+#msg{
+  min-height:52px;margin:16px 0 10px;
+  font-size:18px;font-weight:800;letter-spacing:-.02em;color:var(--text);
+}
+#msg .win{color:var(--green)}
+#msg .lose{color:var(--red)}
+#hist{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;min-height:34px}
+.hd{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13px;border:1px solid rgba(255,255,255,.2);color:#fff}
+
+/* === BETS PANEL === */
+.betcol{display:flex;flex-direction:column;gap:16px}
+.sec{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px}
+.sec-head{
+  display:flex;align-items:center;gap:10px;margin:0 0 12px;
+  font-size:11px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;font-weight:700;
+}
+.sec-head::after{content:"";flex:1;height:1px;background:var(--border)}
+.sec-head svg{width:14px;height:14px;color:var(--accent)}
+
+.bg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.bc{
+  position:relative;padding:18px 6px 12px;
+  border:1px solid var(--border-2);border-radius:12px;
+  background:var(--bg-2);cursor:pointer;text-align:center;transition:.15s;user-select:none;
+  border-top:3px solid var(--c,var(--accent));
+}
+.bc:hover:not(.busy){transform:translateY(-2px);border-color:var(--c,var(--accent));box-shadow:0 10px 20px -10px rgba(0,0,0,.6)}
+.bc.busy{pointer-events:none;opacity:.7}
+.bc.win{animation:ctpulse .5s 6}
+@keyframes ctpulse{50%{background:var(--c);color:#1a1500}}
+.bc b{display:block;font-size:30px;font-weight:800;color:var(--c,var(--accent));letter-spacing:-.02em;line-height:1}
+.bc.numb b{font-size:34px}
+.bc small{display:block;margin-top:4px;font-size:10px;color:var(--muted);letter-spacing:.08em;font-weight:700;text-transform:uppercase}
+.bc .chip{
+  position:absolute;top:-10px;right:-8px;min-width:32px;height:32px;padding:0 6px;
+  border-radius:16px;background:linear-gradient(180deg,var(--accent-2),var(--accent));
+  color:#1a1500;font-weight:800;font-size:12px;display:grid;place-items:center;
+  border:2px solid #fff;box-shadow:0 3px 6px rgba(0,0,0,.6);
+  font-variant-numeric:tabular-nums;
+}
+
+.chips{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.ch{
+  width:54px;height:54px;border-radius:50%;
+  border:3px solid rgba(255,255,255,.85);padding:0;color:#fff;font-weight:900;font-size:13px;
+  box-shadow:0 6px 12px rgba(0,0,0,.4),inset 0 -4px 8px rgba(0,0,0,.35);
+  transition:.15s;
+}
+.ch:hover:not(:disabled){transform:translateY(-3px);filter:brightness(1.15);color:#fff;background:inherit}
+.ch.sel{transform:scale(1.12);box-shadow:0 0 0 3px rgba(240,185,11,.35),0 8px 18px rgba(0,0,0,.5)}
+
+.ctrl{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+#spin{
+  background:linear-gradient(180deg,var(--accent-2),var(--accent));
+  color:#1a1500;font-size:15px;padding:12px 36px;letter-spacing:.08em;
+  border-color:var(--accent);font-weight:800;min-width:180px;
+}
+#spin:hover:not(:disabled){filter:brightness(1.1);background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1a1500}
+.tot{
+  text-align:center;margin:14px 0 0;padding-top:14px;border-top:1px solid var(--border);
+  color:var(--muted-2);font-size:13px;font-weight:600;
+}
+.tot b{color:var(--accent-2);font-weight:800;font-size:16px;font-variant-numeric:tabular-nums;margin-left:4px}
+
+/* === BONUS MODAL === */
+#bonus{
+  position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:20px;
+  background:rgba(0,0,0,.8);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+}
+.bx{
+  width:min(94%,560px);padding:26px 24px;text-align:center;
+  background:var(--panel);border:1px solid var(--border-2);border-radius:var(--radius-lg);
+  box-shadow:0 30px 60px -20px rgba(0,0,0,.8);
+}
+.bx h2{margin:0 0 18px;font-size:22px;color:var(--accent-2);letter-spacing:-.02em}
+#bres{min-height:38px;margin-top:16px;font-size:22px;font-weight:800;color:var(--accent-2);font-variant-numeric:tabular-nums}
+
+/* coin flip */
+.coinrow{display:flex;justify-content:space-around;align-items:center;gap:14px;margin:10px 0}
+.side{font:800 26px 'Manrope',sans-serif;padding:14px 20px;border-radius:12px;color:#fff;background:var(--panel-2);border:1px solid var(--border-2)}
+.side.r{background:linear-gradient(180deg,#c0182b,#8f0f20)}
+.side.b{background:linear-gradient(180deg,#1d5fbf,#0e3c80)}
+#coin{width:110px;height:110px;position:relative;transform-style:preserve-3d;transition:transform 3s cubic-bezier(.2,.7,.2,1)}
+#coin div{
+  position:absolute;inset:0;border-radius:50%;
+  border:4px solid var(--accent);backface-visibility:hidden;
+  display:grid;place-items:center;font-size:44px;background:var(--panel-2);
+}
+#coin .f{background:linear-gradient(180deg,#c0182b,#8f0f20)}
+#coin .k{background:linear-gradient(180deg,#1d5fbf,#0e3c80);transform:rotateY(180deg)}
+
+/* cash hunt */
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:6px}
+.cards button{
+  height:78px;font:800 22px 'Manrope',sans-serif;
+  background:linear-gradient(180deg,#2a3b52,#1a2733);
+  color:#fff;border:1px solid var(--border-2);
+}
+.cards button:hover:not(:disabled){border-color:var(--accent);color:var(--accent-2)}
+.cards button.pick{background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1a1500;transform:scale(1.1);border-color:var(--accent-2)}
+.cards button.dim{opacity:.55}
+
+/* pachinko */
+.pbd{position:relative;width:480px;max-width:100%;height:340px;margin:0 auto;background:#0a1219;border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:inset 0 0 30px #000}
+.pg{position:absolute;width:7px;height:7px;border-radius:50%;background:var(--border-2)}
+#ball{
+  position:absolute;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;
+  background:radial-gradient(circle at 30% 30%,#fff,var(--accent));
+  transition:all .3s linear;box-shadow:0 0 12px var(--accent);
+}
+.slots{display:flex;width:480px;max-width:100%;margin:12px auto 0;border-radius:10px;overflow:hidden;border:1px solid var(--border-2)}
+.slots div{flex:1;padding:9px 0;font-weight:800;font-size:13px;background:var(--panel-2);color:var(--muted-2);border-right:1px solid var(--border);font-variant-numeric:tabular-nums}
+.slots div:last-child{border-right:none}
+.slots div.on{background:linear-gradient(180deg,var(--accent-2),var(--accent));color:#1a1500;box-shadow:0 0 14px rgba(240,185,11,.5)}
+
+/* crazy time bonus wheel */
+#mw{width:340px;height:340px;max-width:100%;margin:0 auto;position:relative}
+#mw canvas{width:100%;height:100%;transition:transform 5.5s cubic-bezier(.1,.6,.1,1);border-radius:50%;box-shadow:0 0 30px rgba(240,185,11,.2)}
+#mw .ptr{border-top-width:26px;border-left-width:12px;border-right-width:12px;top:-8px;border-top-color:var(--accent)}
+</style></head><body>
+
+<header>
+  <a href="/" class="brand">
+    <svg class="brand-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+      <path d="M6 3h12l3 6-9 12L3 9z"/>
+      <path d="M3 9h18M9 3l-1 6 4 12M15 3l1 6-4 12"/>
+    </svg>
+    <span><b>GOLDEN</b> ACE</span>
+  </a>
+  <div class="hgroup">
+    <div class="bal">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5" stroke-dasharray="2 2.5"/>
+      </svg>
+      Żetony: <span id="bal">0</span>
+    </div>
+  </div>
+</header>
+
+<main id="game">
+  <div class="top">
+    <a href="/" style="text-decoration:none"><button>
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5M12 19l-7-7 7-7"/>
+      </svg>
+      Lobby
+    </button></a>
+    <h2>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>
+        <path d="M12 3v2M12 19v2M3 12h2M19 12h2"/>
+      </svg>
+      Crazy Time
+    </h2>
+    <span style="width:80px"></span>
+  </div>
+
+  <div class="layout">
+    <div class="wheelcol">
+      <div class="wheelwrap">
+        <div class="ptr"></div>
+        <div id="wh"><canvas id="cv" width="800" height="800"></canvas></div>
+      </div>
+      <div id="msg">Postaw zakład i zakręć kołem!</div>
+      <div id="hist"></div>
+    </div>
+
+    <div class="betcol">
+      <div class="sec">
+        <div class="sec-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+          Pola
+        </div>
+        <div class="bg" id="bg"></div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5" stroke-dasharray="2 2.5"/>
+          </svg>
+          Żetony
+        </div>
+        <div class="chips" id="chips"></div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>
+          </svg>
+          Akcje
+        </div>
+        <div class="ctrl">
+          <button id="undo" onclick="undo()">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/>
+            </svg>
+            Cofnij
+          </button>
+          <button id="clr" onclick="clr()">Wyczyść</button>
+          <button id="rep" onclick="rep()">Powtórz</button>
+        </div>
+        <div style="display:flex;justify-content:center;margin-top:12px">
+          <button id="spin" onclick="spin()">ZAKRĘĆ</button>
+        </div>
+        <p class="tot">Łączna stawka: <b id="tot">0</b></p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="bonus" class="hide"><div class="bx" id="bx"></div></div>
+
+<script>
+/* ============ API ============ */
+const $=id=>document.getElementById(id),sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const pick=a=>a[Math.random()*a.length|0];
+const token = localStorage.getItem('ga_token') || '';
+async function api(path, method='GET', body){
+  const h = { 'Content-Type':'application/json' };
+  if (token) h['Authorization'] = 'Bearer ' + token;
+  try{
+    const r = await fetch(path, { method, headers:h, body: body?JSON.stringify(body):undefined });
+    let d = null; try{ d = await r.json(); }catch(e){}
+    return { ok:r.ok, status:r.status, data:d };
+  }catch(e){ return { ok:false, status:0, data:{ error:'Brak połączenia z serwerem' } }; }
+}
+
+/* ============ GRA ============ */
+const N=54;
+const INFO={
+  '1':{c:'#e0a92f',t:'1',s:'1 : 1',numb:true},
+  '2':{c:'#3d7fd1',t:'2',s:'2 : 1',numb:true},
+  '5':{c:'#d94f7f',t:'5',s:'5 : 1',numb:true},
+  '10':{c:'#8b4ec9',t:'10',s:'10 : 1',numb:true},
+  coin:{c:'#2ba86e',t:'🪙',n:'COIN FLIP',s:'BONUS'},
+  cash:{c:'#1da5a5',t:'💰',n:'CASH HUNT',s:'BONUS'},
+  pach:{c:'#e07a30',t:'🎱',n:'PACHINKO',s:'BONUS'},
+  crazy:{c:'#d63a4d',t:'🤪',n:'CRAZY TIME',s:'BONUS'}
+};
+const KEYS=['1','2','5','10','coin','cash','pach','crazy'];
+const SEG=(()=>{
+  const a=Array(N).fill(null);
+  const put=(k,ix)=>ix.forEach(i=>{let j=i%N;while(a[j])j=(j+1)%N;a[j]=k});
+  put('crazy',[0]);put('cash',[13,40]);put('pach',[20,47]);put('coin',[6,19,33,46]);put('10',[9,27,36,50]);
+  put('5',[...Array(7)].map((_,i)=>Math.floor((i+.5)*N/7)+1));
+  put('2',[...Array(13)].map((_,i)=>Math.floor((i+.5)*N/13)+2));
+  return a.map(x=>x||'1');
+})();
+
+function drawWheel(){
+  const cv=$('cv'),x=cv.getContext('2d'),S=cv.width,c=S/2,A=Math.PI*2/N;
+  x.clearRect(0,0,S,S);
+  x.save();
+  x.translate(c,c);
+  let g=x.createRadialGradient(0,0,c*.8,0,0,c);
+  g.addColorStop(0,'#1a2733');g.addColorStop(1,'#0f1923');
+  x.beginPath();x.arc(0,0,c-3,0,7);x.fillStyle=g;x.fill();x.lineWidth=6;x.strokeStyle='#f0b90b';x.stroke();
+  for(let i=0;i<N;i++){
+    const a=i*A-Math.PI/2;
+    x.beginPath();x.arc(Math.cos(a)*(c-20),Math.sin(a)*(c-20),6,0,7);
+    x.fillStyle=i%2?'#ffd54a':'#e0a92f';x.fill();
+  }
+  const r1=c-42,r0=c*.26;
+  for(let i=0;i<N;i++){
+    const k=SEG[i],a=i*A-Math.PI/2;
+    x.beginPath();x.moveTo(0,0);x.arc(0,0,r1,a-A/2,a+A/2);x.closePath();
+    x.fillStyle=INFO[k].c;x.fill();
+    x.strokeStyle='rgba(255,255,255,.65)';x.lineWidth=1.5;x.stroke();
+    x.save();
+    x.rotate(a);x.translate(r1-58,0);x.rotate(Math.PI/2);
+    x.textAlign='center';x.textBaseline='middle';
+    x.fillStyle='#fff';x.shadowColor='rgba(0,0,0,.75)';x.shadowBlur=6;
+    x.font=(k.length>2||isNaN(+k)?'bold 40px "Manrope",sans-serif':'900 46px "Manrope",sans-serif');
+    x.fillText(INFO[k].t,0,0);
+    x.restore();
+  }
+  g=x.createRadialGradient(0,0,0,0,0,r0);
+  g.addColorStop(0,'#213743');g.addColorStop(1,'#141f2b');
+  x.beginPath();x.arc(0,0,r0,0,7);x.fillStyle=g;x.fill();
+  x.lineWidth=5;x.strokeStyle='#f0b90b';x.stroke();
+  x.fillStyle='#ffd54a';x.textAlign='center';x.textBaseline='middle';
+  x.font='900 34px "Manrope",sans-serif';
+  x.fillText('CRAZY',0,-18);x.fillText('TIME',0,20);
+  x.restore();
+}
+
+let bal=0,chip=10,bets={},stack=[],last=null,busy=false,rot=0;
+const CHIPC={5:'#c0182b',10:'#1d5fbf',25:'#0a8a3f',100:'#222',500:'#7b2cbf'};
+const total=()=>Object.values(bets).reduce((a,b)=>a+b,0);
+
+function build(){
+  $('bg').innerHTML=KEYS.map(k=>{
+    const i=INFO[k];
+    return `<div class="bc ${i.numb?'numb':''}" data-k="${k}" style="--c:${i.c}" onclick="bet('${k}')">
+      <b>${i.t}</b>
+      <small>${i.n||i.s}</small>
+      ${i.n?`<small style="color:var(--accent-2)">BONUS</small>`:''}
+    </div>`;
+  }).join('');
+  drawChips();render();
+}
+function drawChips(){
+  $('chips').innerHTML=[5,10,25,100,500].map(v=>
+    `<button class="ch ${v===chip?'sel':''}" style="background:${CHIPC[v]}" ${busy?'disabled':''} onclick="chip=${v};drawChips()">${v}</button>`
+  ).join('');
+}
+function render(){
+  document.querySelectorAll('.bc').forEach(e=>{
+    e.querySelector('.chip')?.remove();
+    const v=bets[e.dataset.k];
+    if(v) e.insertAdjacentHTML('beforeend',`<span class="chip">${v>=1000?(v/1000).toFixed(1).replace('.0','')+'k':v}</span>`);
+  });
+  $('bal').textContent=Number(bal).toLocaleString('pl-PL');
+  $('tot').textContent=total().toLocaleString('pl-PL');
+}
+function bet(k){
+  if(busy)return;
+  if(chip>bal){$('msg').textContent='Za mało żetonów!';return}
+  bal-=chip;bets[k]=(bets[k]||0)+chip;stack.push([k,chip]);render();
+}
+function undo(){
+  if(busy||!stack.length)return;
+  const[k,v]=stack.pop();
+  bal+=v;bets[k]-=v;
+  if(!bets[k])delete bets[k];
+  render();
+}
+function clr(){if(busy)return;bal+=total();bets={};stack=[];render()}
+function rep(){
+  if(busy||!last)return;
+  clr();
+  const t=Object.values(last).reduce((a,b)=>a+b,0);
+  if(t>bal){$('msg').textContent='Za mało żetonów na powtórkę';return}
+  for(const k in last){bets[k]=last[k];stack.push([k,last[k]])}
+  bal-=t;render();
+}
+const lock=v=>{['spin','undo','clr','rep'].forEach(i=>$(i).disabled=v);busy=v;drawChips()};
+
+async function spin(){
+  if(busy)return;
+  if(!total()){$('msg').textContent='Najpierw postaw zakład!';return}
+  lock(true);
+  document.querySelectorAll('.bc.win').forEach(e=>e.classList.remove('win'));
+  $('msg').textContent='Koło się kręci…';
+
+  const stake=total();
+  const A=360/N,idx=Math.random()*N|0,k=SEG[idx];
+  const target=(360-idx*A+(Math.random()-.5)*A*.7+360)%360;
+  rot=Math.ceil(rot/360)*360+360*6+target;
+  const wh=$('wh');
+  wh.style.transition='transform 8s cubic-bezier(.08,.55,.12,1)';
+  wh.style.transform=`rotate(${rot}deg)`;
+  await sleep(8400);
+
+  // policz mnożnik
+  const isNum=!isNaN(+k);
+  let mult;
+  if(isNum) mult=+k;
+  else { $('msg').textContent=INFO[k].n+'!'; await sleep(900); mult=await bonus(k); }
+
+  // wyślij do serwera
+  const payload={ bets, segmentIdx: idx };
+  if(!isNum) payload.bonusMult = mult;
+  const r=await api('/api/crazytime/settle','POST',payload);
+
+  if(!r.ok){
+    if(r.status===401){localStorage.removeItem('ga_token');location.href='/';return}
+    $('msg').textContent=r.data?.error||'Błąd serwera';
+    lock(false);
+    return;
+  }
+
+  bal = r.data.user.balance;
+  const win = r.data.win;
+  const net = win - stake;
+  last={...bets};bets={};stack=[];
+
+  const d=document.createElement('div');
+  d.className='hd';d.style.background=INFO[k].c;
+  d.textContent=isNum?k:INFO[k].t;
+  $('hist').prepend(d);
+  if($('hist').children.length>14)$('hist').lastChild.remove();
+
+  $('msg').innerHTML=(isNum?`Wypadło ${k}`:`${INFO[k].n} · ${mult}x`)+' — '+
+    (win
+      ? `<span class="win">wygrana ${win.toLocaleString('pl-PL')} (${net>=0?'+':''}${net.toLocaleString('pl-PL')})</span>`
+      : `<span class="lose">przegrana −${stake.toLocaleString('pl-PL')}</span>`);
+
+  if(win) document.querySelector(`.bc[data-k="${k}"]`)?.classList.add('win');
+
+  if(bal<=0) $('msg').innerHTML+='<br><small style="color:var(--muted)">Odbierz dzienny bonus w lobby.</small>';
+
+  render();
+  lock(false);
+}
+
+/* ============ BONUSY ============ */
+const showB=(t,h)=>{$('bonus').classList.remove('hide');$('bx').innerHTML=`<h2>${t}</h2>${h}<div id="bres"></div>`};
+async function endB(m){$('bres').textContent='Mnożnik: '+m+'x';await sleep(2600);$('bonus').classList.add('hide');return m}
+
+async function bonus(k){
+  if(k==='coin'){
+    const P=[2,3,5,5,7,10,15,20,25,25],a=pick(P),b=pick(P);
+    showB('🪙 COIN FLIP',
+      `<div class="coinrow">
+        <div class="side r">${a}x</div>
+        <div id="coin"><div class="f">🪙</div><div class="k">🪙</div></div>
+        <div class="side b">${b}x</div>
+      </div>`);
+    await sleep(700);
+    const red=Math.random()<.5;
+    $('coin').style.transform=`rotateY(${red?1800:1980}deg)`;
+    await sleep(3400);
+    return endB(red?a:b);
+  }
+  if(k==='cash'){
+    const P=[3,5,5,8,10,10,15,20,25,25,50,100];
+    const v=[...Array(12)].map(()=>pick(P));
+    showB('💰 CASH HUNT',
+      '<p style="color:var(--muted-2);margin:0 0 12px">Wybierz jedną kartę!</p><div class="cards" id="cd">'+
+      v.map((_,i)=>`<button data-i="${i}">?</button>`).join('')+'</div>');
+    const i=await new Promise(res=>document.querySelectorAll('#cd button').forEach(b=>b.onclick=()=>res(+b.dataset.i)));
+    const bs=[...document.querySelectorAll('#cd button')];
+    bs[i].classList.add('pick');bs[i].textContent=v[i]+'x';
+    bs.forEach(b=>b.onclick=null);
+    await sleep(900);
+    bs.forEach((b,j)=>{if(j!==i){b.textContent=v[j]+'x';b.classList.add('dim')}});
+    await sleep(600);
+    return endB(v[i]);
+  }
+  if(k==='pach'){
+    const S=[20,5,15,10,50,5,100,25];
+    let pg='';
+    for(let r=0;r<10;r++)for(let c=0;c<8;c++)
+      pg+=`<div class="pg" style="left:${28+c*60+(r%2?30:0)}px;top:${26+r*28}px"></div>`;
+    showB('🎱 PACHINKO',
+      `<div class="pbd">${pg}<div id="ball" style="left:270px;top:6px"></div></div>
+       <div class="slots">${S.map(s=>`<div>${s}x</div>`).join('')}</div>`);
+    await sleep(700);
+    let x=270;const ball=$('ball');
+    for(let r=0;r<10;r++){
+      x+=Math.random()<.5?-30:30;
+      if(x<30)x=60;if(x>450)x=420;
+      ball.style.left=x+'px';ball.style.top=(30+r*28)+'px';
+      await sleep(330);
+    }
+    ball.style.top='326px';
+    const si=Math.floor(x/60);
+    document.querySelectorAll('.slots div')[si].classList.add('on');
+    await sleep(600);
+    return endB(S[si]);
+  }
+  /* crazy time */
+  const M=[10,10,25,10,50,25,10,100,25,200,10,150];
+  showB('🤪 CRAZY TIME','<div id="mw"><div class="ptr"></div><canvas id="mc" width="500" height="500"></canvas></div>');
+  const c=$('mc'),x=c.getContext('2d'),A=Math.PI*2/M.length;
+  const cols=['#d63a4d','#3d7fd1','#e0a92f','#2ba86e'];
+  x.translate(250,250);
+  M.forEach((m,i)=>{
+    const a=i*A-Math.PI/2;
+    x.beginPath();x.moveTo(0,0);x.arc(0,0,244,a-A/2,a+A/2);x.closePath();
+    x.fillStyle=cols[i%4];x.fill();
+    x.strokeStyle='#fff';x.lineWidth=3;x.stroke();
+    x.save();x.rotate(a);x.translate(180,0);x.rotate(Math.PI/2);
+    x.fillStyle='#fff';x.shadowColor='rgba(0,0,0,.7)';x.shadowBlur=5;
+    x.font='900 44px "Manrope",sans-serif';x.textAlign='center';x.textBaseline='middle';
+    x.fillText(m+'x',0,0);
+    x.restore();
+  });
+  await sleep(900);
+  const i=Math.random()*M.length|0,sa=360/M.length;
+  const tr=360*6+(360-i*sa+(Math.random()-.5)*sa*.6);
+  c.style.transform=`rotate(${tr}deg)`;
+  await sleep(6000);
+  return endB(M[i]);
+}
+
+/* ============ BOOT ============ */
+(async function(){
+  if(!token){ location.href='/'; return; }
+  const r=await api('/api/me');
+  if(!r.ok){ localStorage.removeItem('ga_token'); location.href='/'; return; }
+  bal = r.data.user.balance;
+  chip = Math.min(10, bal) || 5;
+  build();
+  drawWheel();
+})();
+</script></body></html>
