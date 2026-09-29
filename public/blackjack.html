@@ -239,7 +239,19 @@ button .icon{width:16px;height:16px}
 const $=id=>document.getElementById(id),sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const SU=['♠','♥','♦','♣'],RK=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 const CHIPC={5:'#c0182b',10:'#1d5fbf',25:'#0a8a3f',100:'#2a2a2a',500:'#7b2cbf'};
-let bal=1000,stake=10,shoe=[],dealer=[],hands=[],cur=0,phase='bet',busy=false;
+let bal=0,stake=10,shoe=[],dealer=[],hands=[],cur=0,phase='bet',busy=false;
+
+/* ===== API ===== */
+const token = localStorage.getItem('ga_token') || '';
+async function api(path, method='GET', body){
+  const h = { 'Content-Type':'application/json' };
+  if (token) h['Authorization'] = 'Bearer ' + token;
+  try{
+    const r = await fetch(path, { method, headers:h, body: body?JSON.stringify(body):undefined });
+    let d = null; try{ d = await r.json(); }catch(e){}
+    return { ok:r.ok, status:r.status, data:d };
+  }catch(e){ return { ok:false, status:0, data:{ error:'Brak połączenia z serwerem' } }; }
+}
 
 function newShoe(){shoe=[];for(let d=0;d<6;d++)for(const s of SU)for(const r of RK)shoe.push({r,s});
 for(let i=shoe.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[shoe[i],shoe[j]]=[shoe[j],shoe[i]]}}
@@ -312,14 +324,16 @@ busy=true;phase='dealer';render();await sleep(400);
 dealer[1].hidden=false;dealer[1].flip=true;render();await sleep(700);
 const live=!natural&&hands.some(h=>val(h.cards)<=21);
 if(live)while(val(dealer)<17){dealer.push(draw());render();await sleep(700)}
-settle();
+await settle();
 }
-function settle(){
+
+/* ===== ROZLICZENIE (serwer autorytatywny) ===== */
+async function settle(){
 const d=val(dealer),dbj=bj(dealer);let total=0,bets=0;
 hands.forEach(h=>{
 const p=val(h.cards),pbj=hands.length===1&&bj(h.cards);let pay=0,r='Przegrana';
 if(p>21)r='Przegrana (bust)';
-else if(pbj&&!dbj){pay=h.bet*2.5;r='BLACKJACK 3:2'}
+else if(pbj&&!dbj){pay=Math.floor(h.bet*2.5);r='BLACKJACK 3:2'}
 else if(dbj&&!pbj)r='Przegrana';
 else if(d>21||p>d){pay=h.bet*2;r='Wygrana'}
 else if(p===d){pay=h.bet;r='Remis'}
@@ -330,8 +344,29 @@ phase='end';busy=false;
 let m=net>0?`Wygrywasz +${net}`:net<0?`Przegrywasz −${-net}`:'Remis – stawka wraca';
 if(dealer.length&&val(dealer)>21)m='Krupier przekroczył 21! '+m;
 if(stake>bal)stake=bal;
-if(bal<=0){bal=1000;stake=10;m+=' · Bankructwo! Nowe 1000 żetonów.'}
+if(bal<=0)m+=' · Bankructwo! Odbierz dzienny bonus w lobby.';
 $('msg').textContent=m;render();
+
+// zapis do serwera
+const r = await api('/api/blackjack/settle', 'POST', { bet: bets, payout: total });
+if (r.ok){
+  bal = r.data.user.balance;
+  if (stake > bal) stake = bal;
+  render();
+} else if (r.status === 401){
+  localStorage.removeItem('ga_token'); location.href = '/';
+} else {
+  $('msg').textContent = (r.data?.error || 'Błąd zapisu') + ' — odśwież stronę';
 }
-newShoe();render();
+}
+
+/* ===== START ===== */
+(async function(){
+  if (!token){ location.href = '/'; return; }
+  const r = await api('/api/me');
+  if (!r.ok){ localStorage.removeItem('ga_token'); location.href = '/'; return; }
+  bal = r.data.user.balance;
+  stake = Math.min(10, bal) || 0;
+  newShoe(); render();
+})();
 </script></body></html>

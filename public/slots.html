@@ -229,7 +229,19 @@ button .icon{width:16px;height:16px}
 </section>
 
 <script>
-let bal=1000;const $=id=>document.getElementById(id);
+const $=id=>document.getElementById(id);
+const token = localStorage.getItem('ga_token') || '';
+async function api(path, method='GET', body){
+  const h = { 'Content-Type':'application/json' };
+  if (token) h['Authorization'] = 'Bearer ' + token;
+  try{
+    const r = await fetch(path, { method, headers:h, body: body?JSON.stringify(body):undefined });
+    let d = null; try{ d = await r.json(); }catch(e){}
+    return { ok:r.ok, status:r.status, data:d };
+  }catch(e){ return { ok:false, status:0, data:{ error:'Brak połączenia z serwerem' } }; }
+}
+
+let bal=0;
 /* ===== SLOTY ===== */
 const PLUM='<svg viewBox="0 0 40 40" width="1em" height="1em"><ellipse cx="20" cy="24" rx="13" ry="12" fill="#6a2c9a"/><ellipse cx="15" cy="19" rx="4" ry="3" fill="#ffffff55"/><path d="M20 12c0-5 4-8 9-8-1 5-4 8-9 8z" fill="#3fa34d"/></svg>';
 const SY={
@@ -240,7 +252,7 @@ plum:{h:PLUM,pay:{3:10,4:25,5:60},w:14},
 orange:{h:'🍊',pay:{3:10,4:20,5:50},w:15},
 lemon:{h:'🍋',pay:{3:5,4:10,5:40},w:18},
 cherry:{h:'🍒',pay:{2:2,3:5,4:10,5:30},w:22},
-bell:{h:'<span class="bell">🔔</span>',w:6}};
+bell:{h:'<span class="bell">🔔</span>',w:5}};
 const POOL=[];for(const k in SY)for(let i=0;i<SY[k].w;i++)POOL.push(k);
 const rnd=()=>POOL[Math.random()*POOL.length|0];
 const LINES=[[1,1,1,1,1],[0,0,0,0,0],[2,2,2,2,2],[0,1,2,1,0],[2,1,0,1,2],[0,0,1,2,2],[2,2,1,0,0],[1,0,0,0,1],[1,2,2,2,1],[1,0,1,2,1]];
@@ -264,15 +276,38 @@ let base=ids.find(x=>x!=='bell')||'seven',n=0;
 for(const id of ids){if(id===base||id==='bell')n++;else break}
 const m=SY[base].pay[n];return m?{n,mult:m}:null;
 }
+
 async function sSpin(test){
 if(sBusy)return;
-const cost=test===true?0:sBet()*10;
-if(cost>bal){$('smsg').textContent='Za mało żetonów – zmniejsz stawkę.';return}
-sBusy=true;bal-=cost;upd();
+const bet=sBet();
+const cost=bet*10;
+
+let res, srvUser=null, srvWin=0, srvJackpot=false;
+
+if(test===true){
+  /* tryb testowy – bez serwera, bez wypłaty */
+  res=[...Array(5)].map(()=>[rnd(),rnd(),rnd()]);
+  res=res.map(c=>{const a=c.map(x=>x==='bell'?'cherry':x);a[Math.random()*3|0]='bell';return a});
+  const bc=[0,1,2,3,4].filter(c=>res[c].includes('bell'));
+  if(bc.length) bc.forEach(c=>{res[c]=['bell','bell','bell']});
+} else {
+  if(cost>bal){$('smsg').textContent='Za mało żetonów – zmniejsz stawkę.';return}
+  const r=await api('/api/slots/spin','POST',{bet});
+  if(!r.ok){
+    if(r.status===401){localStorage.removeItem('ga_token');location.href='/';return}
+    $('smsg').textContent=r.data?.error||'Błąd serwera';
+    return;
+  }
+  res = r.data.grid;
+  srvWin = r.data.win;
+  srvJackpot = r.data.jackpot;
+  srvUser = r.data.user;
+}
+
+sBusy=true;
 ['sspin','stest'].forEach(i=>$(i).disabled=true);
 $('smsg').textContent='Kręcimy…';
-let res=[...Array(5)].map(()=>[rnd(),rnd(),rnd()]);
-if(test===true)res=res.map(c=>{const a=c.map(x=>x==='bell'?'cherry':x);a[Math.random()*3|0]='bell';return a});
+
 const st=strips(),H=document.querySelector('.reel').clientHeight/3;
 st.forEach((el,c)=>{const ids=[...sg[c]];for(let i=0;i<14+c*7;i++)ids.push(rnd());ids.push(...res[c]);
 el.style.transition='none';el.innerHTML=ids.map(cell).join('');el.style.transform='translateY(0)'});
@@ -281,31 +316,54 @@ st.forEach((el,c)=>{const n=el.children.length-3;
 el.style.transition=`transform ${1.2+c*.4}s cubic-bezier(.2,.85,.3,1.06)`;el.style.transform=`translateY(${-n*H}px)`});
 await sleep(1200+4*400+200);
 st.forEach((el,c)=>{el.style.transition='none';el.innerHTML=res[c].map(cell).join('');el.style.transform='translateY(0)'});
-const bc=[0,1,2,3,4].filter(c=>res[c].includes('bell'));
-if(bc.length){
-await sleep(350);
-bc.forEach(c=>{res[c]=['bell','bell','bell'];st[c].innerHTML=res[c].map(()=>`<div class="sy wx">${SY.bell.h}</div>`).join('')});
-await sleep(800);
-}
+
 sg=res;
-if(bc.length===5){
-const amt=test===true?0:5000*sBet();bal+=amt;upd();
-$('jpamt').textContent=test===true?'(test – bez wypłaty)':'+'+amt.toLocaleString('pl-PL')+' żetonów';
-$('smsg').textContent='🔔 JACKPOT! 🔔';
-const ov=$('jpov');ov.classList.remove('hide');
-for(let i=0;i<45;i++){const c=document.createElement('span');c.className='coin';c.textContent='🪙';c.style.left=Math.random()*100+'%';c.style.animationDuration=(2+Math.random()*2.5)+'s';c.style.animationDelay=Math.random()*1.5+'s';ov.appendChild(c)}
-await sleep(5000);
-ov.querySelectorAll('.coin').forEach(x=>x.remove());ov.classList.add('hide');
-}else{
-let tot=0,wl=[];
-LINES.forEach((ln,i)=>{const w=evalLine(ln.map((r,c)=>res[c][r]));
-if(w){tot+=w.mult*sBet();wl.push(i+1);for(let c=0;c<w.n;c++)st[c].children[ln[c]].classList.add('hit')}});
-bal+=tot;upd();
-$('smsg').textContent=tot?`WYGRANA +${tot.toLocaleString('pl-PL')}  (linie: ${wl.join(', ')})`:'Brak wygranej – spróbuj jeszcze raz!';
+
+const isJackpot = (test===true)
+  ? [0,1,2,3,4].every(c=>res[c].every(x=>x==='bell'))
+  : srvJackpot;
+
+if(isJackpot){
+  await sleep(350);
+  st.forEach(el=>{el.innerHTML=['bell','bell','bell'].map(()=>`<div class="sy wx">${SY.bell.h}</div>`).join('')});
+  await sleep(800);
+  const amt = test===true ? 0 : 5000*sBet();
+  $('jpamt').textContent = test===true ? '(test – bez wypłaty)' : '+'+amt.toLocaleString('pl-PL')+' żetonów';
+  $('smsg').textContent='🔔 JACKPOT! 🔔';
+  const ov=$('jpov');ov.classList.remove('hide');
+  for(let i=0;i<45;i++){const c=document.createElement('span');c.className='coin';c.textContent='🪙';c.style.left=Math.random()*100+'%';c.style.animationDuration=(2+Math.random()*2.5)+'s';c.style.animationDelay=Math.random()*1.5+'s';ov.appendChild(c)}
+  await sleep(5000);
+  ov.querySelectorAll('.coin').forEach(x=>x.remove());ov.classList.add('hide');
+} else {
+  let tot=0, wl=[];
+  LINES.forEach((ln,i)=>{
+    const w=evalLine(ln.map((r,c)=>res[c][r]));
+    if(w){ tot += w.mult*sBet(); wl.push(i+1);
+      for(let c=0;c<w.n;c++) st[c].children[ln[c]].classList.add('hit');
+    }
+  });
+  const shownWin = test===true ? tot : srvWin;
+  $('smsg').textContent = shownWin
+    ? `WYGRANA +${shownWin.toLocaleString('pl-PL')}  (linie: ${wl.join(', ')})`
+    : 'Brak wygranej – spróbuj jeszcze raz!';
 }
-sBusy=false;['sspin','stest'].forEach(i=>$(i).disabled=false);
+
+if(srvUser) bal = srvUser.balance;
+else if(test!==true) bal -= cost;  // awaryjnie, choć nie powinno się zdarzyć
+upd();
+
+sBusy=false;
+['sspin','stest'].forEach(i=>$(i).disabled=false);
 }
+
 addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();sSpin()}});
 
-buildSlots();
+/* ===== START ===== */
+(async function(){
+  if(!token){ location.href='/'; return; }
+  const r = await api('/api/me');
+  if(!r.ok){ localStorage.removeItem('ga_token'); location.href='/'; return; }
+  bal = r.data.user.balance;
+  buildSlots();
+})();
 </script></body></html>

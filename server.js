@@ -250,6 +250,28 @@ app.post('/api/spin', auth, async (req, res) => {
   res.json({ idx, num, win, net: win - stake, user: pub(u) });
 });
 
+/* ============ BLACKJACK ============ */
+app.post('/api/blackjack/settle', auth, async (req, res) => {
+  const bet    = Math.floor(Number(req.body?.bet));
+  const payout = Math.floor(Number(req.body?.payout));
+  if (!Number.isFinite(bet) || bet <= 0 || bet > 1_000_000)
+    return res.status(400).json({ error: 'Nieprawidłowy zakład' });
+  if (!Number.isFinite(payout) || payout < 0 || payout > 10_000_000)
+    return res.status(400).json({ error: 'Nieprawidłowa wypłata' });
+  if (bet > req.user.balance)
+    return res.status(400).json({ error: 'Za mało żetonów' });
+
+  const u = req.user;
+  u.balance      = u.balance - bet + payout;
+  u.totalWagered += bet;
+  u.totalWon     += payout;
+  u.spins        += 1;
+  if (payout > 0) u.wins += 1;
+  if (payout > u.biggestWin) u.biggestWin = payout;
+  await save();
+  res.json({ user: pub(u) });
+});
+
 /* ============ SLOTY ============ */
 app.post('/api/slots/spin', auth, async (req, res) => {
   try {
