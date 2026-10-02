@@ -42,10 +42,15 @@ header{
 .brand{display:flex;align-items:center;gap:6px;font-size:12px;text-decoration:none;color:#bbb}
 .brand-logo{width:16px;height:16px;color:#f0c040}
 .brand span{color:#bbb;font-weight:600}.brand b{color:#f0c040}
-.hgroup{display:flex;align-items:center}
+.hgroup{display:flex;align-items:center;gap:14px}
+.who{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#bbb;font-weight:600}
+.who .icon{width:13px;height:13px;color:#bbb}
+.who span{color:#ddd;font-weight:700}
 .bal{display:inline-flex;align-items:center;gap:7px;background:none;border:0;padding:0;font-size:14px;font-weight:500;color:#eee}
 .bal .icon{width:17px;height:17px;color:#fff}
-.bal span{color:#fff;font-weight:700}
+.bal span{color:#fff;font-weight:700;font-variant-numeric:tabular-nums}
+#logoutBtn{background:transparent;border:0;color:#bbb;font-size:12px;font-weight:600;padding:2px 4px;cursor:pointer}
+#logoutBtn:hover{color:#fff}
 
 /* ============ PRZYCISKI ============ */
 button{font:inherit;font-weight:800;cursor:pointer;border:0;color:#fff;display:inline-flex;align-items:center;justify-content:center;gap:8px}
@@ -106,7 +111,6 @@ button .icon{width:16px;height:16px}
   text-shadow:0 3px 0 #7a0a14,0 0 12px #ff6060}
 .bell{filter:drop-shadow(0 0 8px rgba(255,210,0,.7))}
 
-/* plakietki z numerami linii po bokach bębnów */
 .reels::before,.reels::after{
   content:"";position:absolute;top:5px;height:calc(var(--h)*3);width:60px;pointer-events:none;
   background:no-repeat center/100% 100% url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 480' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23e5141f'/%3E%3Cstop offset='1' stop-color='%238a040f'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cg font-family='Arial' font-weight='bold' font-size='22' fill='%23ffe033' text-anchor='middle'%3E%3Crect x='7' y='43' width='46' height='34' rx='3' fill='url(%23g)' stroke='%23f0c040' stroke-width='2'/%3E%3Ctext x='30' y='68'%3E2%3C/text%3E%3Crect x='7' y='83' width='46' height='34' rx='3' fill='url(%23g)' stroke='%23f0c040' stroke-width='2'/%3E%3Ctext x='30' y='108'%3E4%3C/text%3E%3Crect x='7' y='223' width='46' height='34' rx='3' fill='url(%23g)' stroke='%23f0c040' stroke-width='2'/%3E%3Ctext x='30' y='248'%3E1%3C/text%3E%3Crect x='7' y='363' width='46' height='34' rx='3' fill='url(%23g)' stroke='%23f0c040' stroke-width='2'/%3E%3Ctext x='30' y='388'%3E5%3C/text%3E%3Crect x='7' y='403' width='46' height='34' rx='3' fill='url(%23g)' stroke='%23f0c040' stroke-width='2'/%3E%3Ctext x='30' y='428'%3E3%3C/text%3E%3C/g%3E%3C/svg%3E")}
@@ -165,6 +169,7 @@ button .icon{width:16px;height:16px}
   #sspin{flex:1 1 100%;min-height:54px;font-size:34px}
   .sctrl span{font-size:12px}
   #smsg{font-size:20px}
+  .who{display:none}
 }
 </style></head><body>
 
@@ -177,13 +182,20 @@ button .icon{width:16px;height:16px}
     <span><b>GOLDEN</b> ACE</span>
   </a>
   <div class="hgroup">
+    <span class="who">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>
+      </svg>
+      <span id="who">—</span>
+    </span>
     <div class="bal">
       <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
         <circle cx="12" cy="12" r="9"/>
         <circle cx="12" cy="12" r="5" stroke-dasharray="2 2.5"/>
       </svg>
-      Żetony: <span id="bal">1000</span>
+      Żetony: <span id="bal">—</span>
     </div>
+    <button id="logoutBtn" onclick="logout()">Wyloguj</button>
   </div>
 </header>
 
@@ -238,6 +250,8 @@ button .icon{width:16px;height:16px}
 <script>
 const $=id=>document.getElementById(id);
 const token = localStorage.getItem('ga_token') || '';
+let me = null;
+
 async function api(path, method='GET', body){
   const h = { 'Content-Type':'application/json' };
   if (token) h['Authorization'] = 'Bearer ' + token;
@@ -248,7 +262,13 @@ async function api(path, method='GET', body){
   }catch(e){ return { ok:false, status:0, data:{ error:'Brak połączenia z serwerem' } }; }
 }
 
-let bal=0;
+async function logout(){
+  try { await api('/api/logout','POST'); } catch(e){}
+  localStorage.removeItem('ga_token');
+  location.href = '/';
+}
+
+let bal = 0;
 /* ===== SLOTY ===== */
 const PLUM='<svg viewBox="0 0 40 40" width="1em" height="1em"><ellipse cx="20" cy="24" rx="13" ry="12" fill="#6a2c9a"/><ellipse cx="15" cy="19" rx="4" ry="3" fill="#ffffff55"/><path d="M20 12c0-5 4-8 9-8-1 5-4 8-9 8z" fill="#3fa34d"/></svg>';
 const SY={
@@ -267,7 +287,14 @@ const SBETS=[1,2,5,10,25];let sbi=0,sBusy=false,sg=null;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const cell=id=>`<div class="sy">${SY[id].h}</div>`;
 const sBet=()=>SBETS[sbi];
-function upd(){$('bal').textContent=bal;$('sbet').textContent=sBet();$('scost').textContent=sBet()*10;$('jpv').textContent=(5000*sBet()).toLocaleString('pl-PL')}
+
+function upd(){
+  $('bal').textContent = Number(bal).toLocaleString('pl-PL');
+  if (me) $('who').textContent = me.username;
+  $('sbet').textContent = sBet();
+  $('scost').textContent = sBet()*10;
+  $('jpv').textContent = (5000*sBet()).toLocaleString('pl-PL');
+}
 function sBetChg(d){if(sBusy)return;sbi=Math.min(SBETS.length-1,Math.max(0,sbi+d));upd()}
 function buildSlots(){
 sg=sg||[...Array(5)].map(()=>[rnd(),rnd(),rnd()]);
@@ -292,7 +319,6 @@ const cost=bet*10;
 let res, srvUser=null, srvWin=0, srvJackpot=false;
 
 if(test===true){
-  /* tryb testowy – bez serwera, bez wypłaty */
   res=[...Array(5)].map(()=>[rnd(),rnd(),rnd()]);
   res=res.map(c=>{const a=c.map(x=>x==='bell'?'cherry':x);a[Math.random()*3|0]='bell';return a});
   const bc=[0,1,2,3,4].filter(c=>res[c].includes('bell'));
@@ -320,7 +346,6 @@ snd.currentTime = 0;
 snd.volume = 0.6;
 snd.play().catch(()=>{});
 
-/* dźwięk stopni dla każdego bębna */
 const stopSnd = $('stopSound');
 const stops = [1.70, 2.09, 2.48, 2.87, 3.26].map(t =>
   setTimeout(() => {
@@ -334,7 +359,6 @@ const stops = [1.70, 2.09, 2.48, 2.87, 3.26].map(t =>
 
 const st=strips(),H=document.querySelector('.reel').clientHeight/3;
 st.forEach((el,c)=>{
-  /* nowy wynik NA GÓRZE, losowe w środku, stary wynik NA DOLE */
   const ids=[...res[c]];
   for(let i=0;i<14+c*7;i++)ids.push(rnd());
   ids.push(...sg[c]);
@@ -353,7 +377,6 @@ st.forEach((el,c)=>{el.style.transition='none';el.innerHTML=res[c].map(cell).joi
 
 sg=res;
 
-/* policz kolumny z dzwonkami (3 dzwonki = cała kolumna) */
 const bellCols = [0,1,2,3,4].filter(c => res[c].every(x => x === 'bell'));
 
 const isJackpot = (test===true)
@@ -372,7 +395,6 @@ if(isJackpot){
   await sleep(5000);
   ov.querySelectorAll('.coin').forEach(x=>x.remove());ov.classList.add('hide');
 } else {
-  /* 1-4 dzwonki – animacja + dźwięk */
   if(bellCols.length > 0){
     await sleep(350);
     bellCols.forEach(c => {
@@ -402,8 +424,7 @@ if(isJackpot){
     : 'Brak wygranej – spróbuj jeszcze raz!';
 }
 
-if(srvUser) bal = srvUser.balance;
-else if(test!==true) bal -= cost;
+if(srvUser){ me = srvUser; bal = srvUser.balance; }
 upd();
 
 snd.pause();
@@ -417,12 +438,40 @@ sBusy=false;
 
 addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();sSpin()}});
 
+/* ===== Odświeżanie salda (jak w lobby i innych grach) ===== */
+async function refreshMe(){
+  if(!token) return;
+  try {
+    const r = await api('/api/me');
+    if(!r.ok){
+      if(r.status===401){ localStorage.removeItem('ga_token'); location.href='/'; }
+      return;
+    }
+    if(!r.data?.user) return;
+    me = r.data.user;
+    bal = me.balance;
+    upd();
+  } catch(e){}
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') refreshMe();
+});
+window.addEventListener('focus', refreshMe);
+window.addEventListener('pageshow', (e) => { if (e.persisted) refreshMe(); });
+
 /* ===== START ===== */
 (async function(){
   if(!token){ location.href='/'; return; }
-  const r = await api('/api/me');
-  if(!r.ok){ localStorage.removeItem('ga_token'); location.href='/'; return; }
-  bal = r.data.user.balance;
-  buildSlots();
+  try {
+    const r = await api('/api/me');
+    if(!r.ok){ localStorage.removeItem('ga_token'); location.href='/'; return; }
+    if(!r.data?.user){ localStorage.removeItem('ga_token'); location.href='/'; return; }
+    me = r.data.user;
+    bal = me.balance;
+    buildSlots();
+  } catch(e){
+    console.error('Boot error:', e);
+    location.href = '/';
+  }
 })();
 </script></body></html>
