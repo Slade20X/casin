@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="pl"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Keno — Golden Ace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1923; --bg-2:#141f2b; --panel:#1a2733; --panel-2:#213743;
+  --border:#2f4553; --border-2:#3d5666;
+  --text:#ffffff; --muted:#8a9fb2; --muted-2:#b1bad3;
+  --accent:#f0b90b; --accent-2:#ffd54a;
+  --green:#00e701; --red:#ff4d4d;
+  --radius:12px; --radius-lg:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  min-height:100vh;color:var(--text);
+  font-family:'Manrope',system-ui,-apple-system,sans-serif;font-weight:500;
+  background:var(--bg);
+  background-image:
+    radial-gradient(1200px 600px at 50% -10%, #1e3446 0%, transparent 60%),
+    radial-gradient(900px 500px at 100% 100%, #16232f 0%, transparent 50%);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+h1,h2,h3{font-family:'Manrope',sans-serif;font-weight:800;margin:0;letter-spacing:-0.025em}
+.hide{display:none!important}
+.icon{width:1em;height:1em;display:inline-block;vertical-align:-0.14em;flex-shrink:0;stroke-width:1.8}
+
+/* HEADER */
+header{
+  position:sticky;top:0;z-index:50;
+  display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:14px 24px;
+  background:rgba(15,25,35,.85);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-0.02em;text-decoration:none}
+.brand-logo{width:24px;height:24px;color:var(--accent);flex-shrink:0}
+.brand span{color:var(--text);font-weight:600}
+.brand b{color:var(--accent);font-weight:800}
+.hgroup{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.who{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--muted-2);font-weight:600}
+.who .icon{width:15px;height:15px;color:var(--muted)}
+.bal{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:10px;padding:8px 14px;font-weight:700;font-size:14px;
+  color:var(--muted-2);font-variant-numeric:tabular-nums;
+}
+.bal .icon{width:15px;height:15px;color:var(--accent)}
+.bal span{color:var(--accent-2);font-weight:800}
+
+button{
+  font:inherit;font-weight:700;font-size:14px;
+  cursor:pointer;border-radius:10px;
+  border:1px solid var(--border);
+  background:var(--panel);color:var(--text);
+  padding:10px 16px;transition:.15s;
+  display:inline-flex;align-items:center;gap:8px;justify-content:center;
+}
+button:hover:not(:disabled){border-color:var(--border-2);background:var(--panel-2)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button .icon{width:16px;height:16px}
+
+#game{max-width:1000px;margin:0 auto;padding:22px 20px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px}
+.top h2{color:var(--text);font-size:20px;font-weight:800;display:flex;align-items:center;gap:10px}
+.top h2 svg{width:20px;height:20px;color:var(--accent)}
+
+.layout{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;align-items:start}
+@media(max-width:820px){.layout{grid-template-columns:1fr}}
+
+/* HALL */
+.hall{
+  background:var(--panel);border:1px solid var(--border-2);
+  border-radius:var(--radius-lg);padding:18px;
+  box-shadow:0 20px 40px -20px #000a;
+}
+.bar{
+  display:flex;justify-content:space-between;align-items:center;
+  color:var(--muted);font-size:13px;gap:10px;flex-wrap:wrap;
+  margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);
+}
+.bar b{color:var(--accent-2);font-weight:800;font-variant-numeric:tabular-nums}
+.bar>span{display:inline-flex;align-items:center;gap:6px}
+
+.grid{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
+.n{
+  aspect-ratio:1;border:1px solid var(--border);border-radius:50%;
+  background:var(--panel-2);color:var(--text);
+  font:800 clamp(13px,3.6vw,18px) 'Manrope',sans-serif;
+  cursor:pointer;transition:transform .12s,background .15s,border-color .15s,box-shadow .15s;
+  font-variant-numeric:tabular-nums;
+  display:grid;place-items:center;
+  padding:0;
+}
+.n:hover:not(:disabled){transform:scale(1.08);border-color:var(--border-2);background:#2a4256}
+.n:disabled{cursor:default}
+.n.p{
+  background:rgba(240,185,11,.1);
+  border-color:var(--accent);
+  color:var(--accent-2);
+  box-shadow:inset 0 0 0 2px var(--accent);
+}
+.n.m{opacity:.35}
+.n.m.p{opacity:1;border-color:var(--muted);color:var(--muted-2);box-shadow:inset 0 0 0 2px var(--muted)}
+.n.d:not(.p){background:var(--panel);border-color:var(--border);color:var(--muted);opacity:.8}
+.n.h{
+  background:linear-gradient(180deg,var(--accent-2),var(--accent));
+  border-color:var(--accent-2);
+  color:#1a1500;
+  box-shadow:0 0 20px rgba(240,185,11,.55);
+  opacity:1;
+}
+.n.last{animation:pop .3s}
+@keyframes pop{40%{transform:scale(1.35)}}
+@media (prefers-reduced-motion:reduce){.n.last{animation:none}.n{transition:none}}
+
+.res{
+  text-align:center;min-height:1.6em;margin-top:14px;
+  font:800 20px 'Manrope',sans-serif;letter-spacing:-0.02em;
+}
+
+/* PANEL */
+.ctl{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:18px;
+  display:grid;gap:14px;align-content:start;
+}
+.grp{display:grid;gap:8px}
+.grp>span{color:var(--muted);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.q{
+  flex:1;background:var(--panel-2);color:var(--text);
+  border:1px solid var(--border);border-radius:10px;
+  padding:10px 8px;font:700 13px 'Manrope',sans-serif;
+  cursor:pointer;transition:.15s;
+}
+.q:hover:not(:disabled){border-color:var(--border-2);background:var(--panel)}
+.q:disabled{opacity:.4;cursor:not-allowed}
+
+input{
+  width:100%;background:var(--bg);color:var(--text);
+  border:1px solid var(--border);border-radius:10px;
+  padding:12px 14px;font:700 15px 'Manrope',sans-serif;
+  font-variant-numeric:tabular-nums;transition:.15s;
+}
+input:focus{outline:none;border-color:var(--accent);background:var(--bg-2)}
+input::placeholder{color:var(--muted);font-weight:500}
+
+#main{
+  width:100%;padding:16px;border-radius:12px;
+  background:linear-gradient(180deg,var(--accent-2),var(--accent));
+  color:#1a1500;border:1px solid var(--accent);
+  font:800 16px 'Manrope',sans-serif;letter-spacing:.06em;
+}
+#main:hover:not(:disabled){filter:brightness(1.08)}
+#main:disabled{opacity:.4;cursor:not-allowed}
+
+.tbl{display:grid;gap:4px;font-size:13px}
+.tbl div{
+  display:flex;justify-content:space-between;
+  padding:6px 10px;border-radius:8px;
+  border:1px solid transparent;color:var(--muted-2);
+  font-variant-numeric:tabular-nums;
+}
+.tbl div b{color:var(--accent-2);font-weight:800}
+.tbl div.on{
+  border-color:rgba(0,231,1,.5);
+  background:rgba(0,231,1,.08);
+  color:var(--text);
+}
+.tbl div.on b{color:var(--green)}
+
+.hist{display:flex;gap:6px;flex-wrap:wrap;min-height:30px}
+.chip{
+  padding:4px 10px;border-radius:99px;border:1px solid var(--border);
+  font-weight:700;font-size:12px;background:var(--panel-2);
+  color:var(--muted);font-variant-numeric:tabular-nums;
+}
+.chip.w{color:var(--green);border-color:rgba(0,231,1,.4)}
+
+.foot{
+  color:var(--muted);font-size:12px;
+  margin-top:14px;padding-top:14px;border-top:1px solid var(--border);
+}
+
+@media(max-width:600px){
+  header{padding:12px 16px}
+  .brand{font-size:15px}
+  #game{padding:16px 12px}
+  .ctl{padding:14px}
+  .grid{gap:6px}
+}
+</style></head><body>
+
+<header>
+  <a href="/" class="brand">
+    <svg class="brand-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+      <path d="M6 3h12l3 6-9 12L3 9z"/>
+      <path d="M3 9h18M9 3l-1 6 4 12M15 3l1 6-4 12"/>
+    </svg>
+    <span><b>GOLDEN</b> ACE</span>
+  </a>
+  <div class="hgroup">
+    <span class="who">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>
+      </svg>
+      <span id="who">—</span>
+    </span>
+    <div class="bal">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5" stroke-dasharray="2 2.5"/>
+      </svg>
+      <span id="bal">—</span>
+    </div>
+    <button onclick="logout()">Wyloguj</button>
+  </div>
+</header>
+
+<main id="game">
+<div class="top">
+  <a href="/" style="text-decoration:none"><button>
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 12H5M12 19l-7-7 7-7"/>
+    </svg>
+    Lobby
+  </button></a>
+  <h2>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/>
+      <circle cx="8" cy="10" r="1"/><circle cx="12" cy="9" r="1"/>
+      <circle cx="16" cy="11" r="1"/><circle cx="10" cy="14" r="1"/>
+      <circle cx="14" cy="15" r="1"/>
+    </svg>
+    Keno
+  </h2>
+  <span style="width:80px"></span>
+</div>
+
+<div class="layout">
+  <div class="hall">
+    <div class="bar">
+      <span>Wybrane: <b id="kc">0</b>/10</span>
+      <span>Trafienia: <b id="hc">0</b></span>
+      <span id="rtp"></span>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="res" id="res"></div>
+  </div>
+
+  <div class="ctl">
+    <div class="grp">
+      <span>Wybierz liczby (1–10) albo wylosuj</span>
+      <div class="seg" id="qp">
+        <button class="q" data-v="3">3</button>
+        <button class="q" data-v="5">5</button>
+        <button class="q" data-v="8">8</button>
+        <button class="q" data-v="10">10</button>
+      </div>
+      <button class="q" id="clr">Wyczyść wybór</button>
+    </div>
+
+    <div class="grp">
+      <span>Stawka</span>
+      <input id="bet" type="number" min="1" step="1" value="10" inputmode="numeric">
+      <div class="seg">
+        <button class="q" data-b="10">10</button>
+        <button class="q" data-b="50">50</button>
+        <button class="q" data-m="0.5">½</button>
+        <button class="q" data-m="2">2×</button>
+        <button class="q" data-m="max">Max</button>
+      </div>
+    </div>
+
+    <button id="main">Losuj liczby</button>
+
+    <div class="grp">
+      <span>Tabela wypłat dla Twojego wyboru</span>
+      <div class="tbl" id="tbl"></div>
+    </div>
+
+    <div class="hist" id="hist" aria-label="Ostatnie rundy"></div>
+
+    <div class="foot">
+      Z 40 liczb losujemy 10. Im więcej trafisz, tym wyższy mnożnik, a tabela dopasowuje się do liczby wybranych pól. Spacja = losuj.
+    </div>
+  </div>
+</div>
+</main>
+
+<script>
+/* ============ API ============ */
+const $ = s => document.querySelector(s);
+const token = localStorage.getItem('ga_token') || '';
+let me = null;
+
+async function api(path, method='GET', body){
+  const h = { 'Content-Type':'application/json' };
+  if (token) h['Authorization'] = 'Bearer ' + token;
+  try{
+    const r = await fetch(path, { method, headers:h, body: body?JSON.stringify(body):undefined });
+    let d = null; try{ d = await r.json(); }catch(e){}
+    return { ok:r.ok, status:r.status, data:d };
+  }catch(e){ return { ok:false, status:0, data:{ error:'Brak połączenia z serwerem' } }; }
+}
+async function logout(){
+  try{ await api('/api/logout','POST'); }catch(e){}
+  localStorage.removeItem('ga_token');
+  location.href = '/';
+}
+
+/* ============ KONFIG GRY ============ */
+const N = 40, D = 10, CAP = 10000, RTP = .96;
+
+/* ============ STAN ============ */
+let picks = new Set();
+let bal = 0;
+let hist = [];
+let busy = false;
+let drawn = [];
+let hits = 0;
+let table = [];
+let bet = 0;
+let msg = '', msgCol = '';
+
+const C = (n,r) => { if (r < 0 || r > n) return 0; let x = 1; for (let i=1;i<=r;i++) x = x*(n-r+i)/i; return x; };
+const P = (k,h) => C(k,h) * C(N-k, D-h) / C(N,D);
+const shuf = a => { for (let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const fmt = x => x >= 1000 ? Math.round(x).toLocaleString('pl-PL')
+                : x >= 100 ? x.toFixed(1).replace(/\.0$/,'')
+                : (+x.toFixed(2)).toString();
+const getBet = () => Math.max(1, Math.floor(parseFloat($('#bet').value) || 0));
+
+function calc(){
+  const k = picks.size;
+  table = Array(k+1).fill(0);
+  if (!k) return;
+  const lo = Math.max(1, Math.floor(k/2));
+  const hs = [];
+  for (let h=lo; h<=k; h++) hs.push(h);
+  const w = hs.map((h,i) => Math.pow(.6, i));
+  const free = hs.map(() => true);
+  const m = hs.map(() => 0);
+  for (let pass=0; pass<8; pass++){
+    const fixed = hs.reduce((a,h,i) => a + (free[i] ? 0 : CAP * P(k,h)), 0);
+    const ws = hs.reduce((a,h,i) => a + (free[i] ? w[i] : 0), 0);
+    hs.forEach((h,i) => { if (free[i]) m[i] = (RTP - fixed) * w[i] / ws / P(k,h); });
+    let cap = false;
+    hs.forEach((h,i) => { if (free[i] && m[i] > CAP){ free[i] = false; m[i] = CAP; cap = true; } });
+    if (!cap) break;
+  }
+  hs.forEach((h,i) => table[h] = Math.round(m[i] * 100) / 100);
+}
+
+/* ============ GRID ============ */
+const grid = $('#grid');
+for (let i=1; i<=N; i++){
+  const b = document.createElement('button');
+  b.className = 'n';
+  b.textContent = i;
+  b.onclick = () => toggle(i);
+  grid.appendChild(b);
+}
+
+function toggle(i){
+  if (busy) return;
+  if (picks.has(i)) picks.delete(i);
+  else if (picks.size < 10) picks.add(i);
+  else return;
+  clearDraw();
+  calc();
+  render();
+}
+function clearDraw(){ drawn = []; hits = 0; msg = ''; }
+
+/* ============ RENDER ============ */
+function render(){
+  const k = picks.size, last = drawn[drawn.length-1];
+
+  $('#bal').textContent = Number(bal).toLocaleString('pl-PL');
+  if (me) $('#who').textContent = me.username;
+  $('#kc').textContent = k;
+  $('#hc').textContent = hits;
+
+  let r = 0;
+  for (let h=0; h<=k; h++) r += P(k,h) * (table[h] || 0);
+  $('#rtp').textContent = k ? 'Zwrot: ' + (r * 100).toFixed(1) + '%' : '';
+
+  grid.querySelectorAll('.n').forEach((b,x) => {
+    const n = x + 1;
+    const p = picks.has(n), d = drawn.includes(n);
+    b.className = 'n'
+      + (p ? ' p' : '')
+      + (d ? (p ? ' h' : ' d') : '')
+      + (drawn.length && !d ? ' m' : '')
+      + (n === last ? ' last' : '');
+    b.disabled = busy;
+  });
+
+  $('#tbl').innerHTML = table.map((m,h) =>
+    m ? `<div class="${h===hits&&drawn.length?'on':''}"><span>${h} z ${k}</span><b>${fmt(m)}×</b></div>` : ''
+  ).reverse().join('') || '<div><span>Wybierz liczby</span></div>';
+
+  $('#hist').innerHTML = hist.slice().reverse().map(x =>
+    `<span class="chip ${x>=1?'w':''}">${x?fmt(x)+'×':'0'}</span>`
+  ).join('');
+
+  $('#res').textContent = msg;
+  $('#res').style.color = msgCol || 'var(--text)';
+
+  const m = $('#main');
+  m.disabled = busy || !k || getBet() > bal;
+  m.textContent = busy ? 'Losowanie…'
+                 : !k ? 'Wybierz liczby'
+                 : getBet() > bal ? 'Brak żetonów'
+                 : 'Losuj (' + getBet() + ')';
+
+  document.querySelectorAll('.ctl .q, #bet').forEach(e => { if (e.id !== 'main') e.disabled = busy; });
+}
+
+/* ============ GRA ============ */
+function play(){
+  if (busy || !picks.size) return;
+  const b = getBet();
+  if (b > bal) return;
+  bal -= b; bet = b; busy = true;
+  clearDraw();
+  render();
+
+  const pool = shuf([...Array(N)].map((_,i) => i+1)).slice(0, D);
+  let i = 0;
+  (function step(){
+    const n = pool[i++];
+    drawn.push(n);
+    if (picks.has(n)) hits++;
+    render();
+    if (i < D) setTimeout(step, 260);
+    else end();
+  })();
+}
+
+async function end(){
+  const m = table[hits] || 0;
+  const win = Math.floor(bet * m);
+
+  hist.push(m);
+  hist = hist.slice(-14);
+
+  if (m >= 1) { msg = 'Trafiłeś ' + hits + '! +' + (win - bet).toLocaleString('pl-PL') + ' (' + fmt(m) + '×)'; msgCol = 'var(--green)'; }
+  else if (m > 0) { msg = 'Trafiłeś ' + hits + ', zwrot ' + win.toLocaleString('pl-PL') + ' (' + fmt(m) + '×)'; msgCol = 'var(--accent-2)'; }
+  else { msg = 'Trafienia: ' + hits + '. Bez wygranej'; msgCol = 'var(--muted)'; }
+
+  bal += win;
+  render();
+
+  const r = await api('/api/keno/settle', 'POST', { bet, payout: win });
+  if (r.ok && r.data?.user){ me = r.data.user; bal = me.balance; render(); }
+  else if (r.status === 401){ localStorage.removeItem('ga_token'); location.href='/'; return; }
+  else if (!r.ok){ $('#res').textContent = r.data?.error || 'Błąd zapisu'; }
+
+  busy = false;
+  render();
+}
+
+/* ============ INTERAKCJE ============ */
+document.querySelectorAll('#qp .q').forEach(b => b.onclick = () => {
+  if (busy) return;
+  picks = new Set(shuf([...Array(N)].map((_,i) => i+1)).slice(0, +b.dataset.v));
+  clearDraw();
+  calc();
+  render();
+});
+$('#clr').onclick = () => {
+  if (busy) return;
+  picks.clear();
+  clearDraw();
+  calc();
+  render();
+};
+
+document.querySelectorAll('.q[data-b], .q[data-m]').forEach(b => b.onclick = () => {
+  if (busy) return;
+  const s = b.dataset;
+  let v = getBet();
+  v = s.b ? +s.b : s.m === 'max' ? Math.floor(bal) : Math.max(1, Math.floor(v * +s.m));
+  $('#bet').value = Math.max(1, Math.min(v, Math.max(1, Math.floor(bal))));
+  render();
+});
+
+$('#bet').oninput = render;
+$('#main').onclick = play;
+
+addEventListener('keydown', e => {
+  if (e.code === 'Space' && !/INPUT/.test(document.activeElement.tagName)){
+    e.preventDefault();
+    play();
+  }
+});
+
+/* ============ ODSWIEZANIE SALDA ============ */
+async function refreshMe(){
+  if (!token) return;
+  if (busy) return;
+  try {
+    const r = await api('/api/me');
+    if (!r.ok){
+      if (r.status === 401){ localStorage.removeItem('ga_token'); location.href = '/'; }
+      return;
+    }
+    if (!r.data?.user) return;
+    me = r.data.user;
+    bal = me.balance;
+    render();
+  } catch(e){}
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') refreshMe();
+});
+window.addEventListener('focus', refreshMe);
+window.addEventListener('pageshow', e => { if (e.persisted) refreshMe(); });
+
+/* ============ START ============ */
+(async function(){
+  if (!token){ location.href = '/'; return; }
+  const r = await api('/api/me');
+  if (!r.ok || !r.data?.user){
+    localStorage.removeItem('ga_token');
+    location.href = '/';
+    return;
+  }
+  me = r.data.user;
+  bal = me.balance;
+  picks = new Set(shuf([...Array(N)].map((_,i) => i+1)).slice(0, 5));
+  calc();
+  render();
+})();
+</script></body></html>

@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="pl"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kopalnia — Golden Ace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1923; --bg-2:#141f2b; --panel:#1a2733; --panel-2:#213743;
+  --border:#2f4553; --border-2:#3d5666;
+  --text:#ffffff; --muted:#8a9fb2; --muted-2:#b1bad3;
+  --accent:#f0b90b; --accent-2:#ffd54a;
+  --green:#00e701; --red:#ff4d4d;
+  --gem:#38e1ff; --bomb:#ff6a3d;
+  --radius:12px; --radius-lg:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  min-height:100vh;color:var(--text);
+  font-family:'Manrope',system-ui,-apple-system,sans-serif;font-weight:500;
+  background:var(--bg);
+  background-image:
+    radial-gradient(1200px 600px at 50% -10%, #1e3446 0%, transparent 60%),
+    radial-gradient(900px 500px at 100% 100%, #16232f 0%, transparent 50%);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+h1,h2,h3{font-family:'Manrope',sans-serif;font-weight:800;margin:0;letter-spacing:-0.025em}
+.hide{display:none!important}
+.icon{width:1em;height:1em;display:inline-block;vertical-align:-0.14em;flex-shrink:0;stroke-width:1.8}
+
+/* HEADER */
+header{
+  position:sticky;top:0;z-index:50;
+  display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:14px 24px;
+  background:rgba(15,25,35,.85);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-0.02em;text-decoration:none}
+.brand-logo{width:24px;height:24px;color:var(--accent);flex-shrink:0}
+.brand span{color:var(--text);font-weight:600}
+.brand b{color:var(--accent);font-weight:800}
+.hgroup{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.who{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--muted-2);font-weight:600}
+.who .icon{width:15px;height:15px;color:var(--muted)}
+.bal{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:10px;padding:8px 14px;font-weight:700;font-size:14px;
+  color:var(--muted-2);font-variant-numeric:tabular-nums;
+}
+.bal .icon{width:15px;height:15px;color:var(--accent)}
+.bal span{color:var(--accent-2);font-weight:800}
+
+button{
+  font:inherit;font-weight:700;font-size:14px;
+  cursor:pointer;border-radius:10px;
+  border:1px solid var(--border);
+  background:var(--panel);color:var(--text);
+  padding:10px 16px;transition:.15s;
+  display:inline-flex;align-items:center;gap:8px;justify-content:center;
+}
+button:hover:not(:disabled){border-color:var(--border-2);background:var(--panel-2)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button .icon{width:16px;height:16px}
+
+#game{max-width:1000px;margin:0 auto;padding:22px 20px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px}
+.top h2{color:var(--text);font-size:20px;font-weight:800;display:flex;align-items:center;gap:10px}
+.top h2 svg{width:20px;height:20px;color:var(--accent)}
+
+.layout{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;align-items:start}
+@media(max-width:820px){.layout{grid-template-columns:1fr}}
+
+/* PIT */
+.pit{
+  background:var(--panel);border:1px solid var(--border-2);
+  border-radius:var(--radius-lg);padding:16px;
+  box-shadow:0 20px 40px -20px #000a;
+}
+.stats{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+  margin-bottom:14px;text-align:center;
+}
+.stats small{
+  display:block;color:var(--muted);font-size:11px;
+  letter-spacing:.16em;text-transform:uppercase;font-weight:700;margin-bottom:4px;
+}
+.stats b{font:800 18px 'Manrope',sans-serif;font-variant-numeric:tabular-nums}
+#sNow{color:var(--gem)}
+#sNext{color:var(--accent-2)}
+#sWin{color:var(--green)}
+
+.grid{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:8px;
+  max-width:520px;margin:0 auto;
+}
+.t{
+  aspect-ratio:1;border:1px solid var(--border);border-radius:12px;
+  background:var(--panel-2);
+  box-shadow:inset 0 -4px 0 rgba(0,0,0,.25);
+  font-size:clamp(20px,6vw,34px);
+  cursor:pointer;transition:transform .12s,background .15s,border-color .15s;
+  display:grid;place-content:center;
+  color:var(--text);
+}
+.t:hover:not(:disabled){background:#2a4256;transform:translateY(-2px);border-color:var(--border-2)}
+.t:disabled{cursor:default}
+.t.gem{
+  background:color-mix(in srgb,var(--gem) 22%,var(--panel));
+  border-color:var(--gem);
+  box-shadow:inset 0 0 0 2px var(--gem),0 0 16px rgba(56,225,255,.35);
+}
+.t.bomb{
+  background:color-mix(in srgb,var(--bomb) 30%,var(--panel));
+  border-color:var(--bomb);
+  box-shadow:inset 0 0 0 2px var(--bomb),0 0 16px rgba(255,106,61,.35);
+  animation:pop .4s;
+}
+.t.dim{opacity:.4}
+@keyframes pop{30%{transform:scale(1.15)}60%{transform:scale(.95)}}
+@media (prefers-reduced-motion:reduce){.t.bomb{animation:none}.t{transition:none}}
+
+.msg{
+  text-align:center;min-height:1.6em;margin-top:14px;
+  font:800 18px 'Manrope',sans-serif;letter-spacing:-0.02em;
+}
+
+/* PANEL */
+.ctl{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:var(--radius-lg);padding:18px;
+  display:grid;gap:14px;align-content:start;
+}
+.grp{display:grid;gap:8px}
+.grp>span{color:var(--muted);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.q{
+  flex:1;background:var(--panel-2);color:var(--text);
+  border:1px solid var(--border);border-radius:10px;
+  padding:10px 8px;font:700 13px 'Manrope',sans-serif;
+  cursor:pointer;transition:.15s;
+}
+.q:hover:not(:disabled){border-color:var(--border-2);background:var(--panel)}
+.q.on{
+  background:linear-gradient(180deg,var(--accent-2),var(--accent));
+  border-color:var(--accent);color:#1a1500;
+}
+.q:disabled{opacity:.4;cursor:not-allowed}
+
+input{
+  width:100%;background:var(--bg);color:var(--text);
+  border:1px solid var(--border);border-radius:10px;
+  padding:12px 14px;font:700 15px 'Manrope',sans-serif;
+  font-variant-numeric:tabular-nums;transition:.15s;
+}
+input:focus{outline:none;border-color:var(--accent);background:var(--bg-2)}
+input::placeholder{color:var(--muted);font-weight:500}
+
+#main{
+  width:100%;padding:16px;border-radius:12px;
+  background:linear-gradient(180deg,var(--accent-2),var(--accent));
+  color:#1a1500;border:1px solid var(--accent);
+  font:800 16px 'Manrope',sans-serif;letter-spacing:.06em;
+}
+#main:hover:not(:disabled){filter:brightness(1.08)}
+#main:disabled{opacity:.4;cursor:not-allowed}
+#main.cash{
+  background:linear-gradient(180deg,#00e701,#00b800);
+  border-color:var(--green);color:#002a00;
+}
+
+.hist{display:flex;gap:6px;flex-wrap:wrap;min-height:30px}
+.chip{
+  padding:4px 10px;border-radius:99px;border:1px solid var(--border);
+  font-weight:700;font-size:12px;background:var(--panel-2);
+  font-variant-numeric:tabular-nums;
+}
+.chip.w{color:var(--green);border-color:rgba(0,231,1,.4)}
+.chip.l{color:var(--bomb);border-color:rgba(255,106,61,.4)}
+
+.foot{
+  color:var(--muted);font-size:12px;
+  margin-top:14px;padding-top:14px;border-top:1px solid var(--border);
+}
+
+@media(max-width:600px){
+  header{padding:12px 16px}
+  .brand{font-size:15px}
+  #game{padding:16px 12px}
+  .ctl{padding:14px}
+}
+</style></head><body>
+
+<header>
+  <a href="/" class="brand">
+    <svg class="brand-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
+      <path d="M6 3h12l3 6-9 12L3 9z"/>
+      <path d="M3 9h18M9 3l-1 6 4 12M15 3l1 6-4 12"/>
+    </svg>
+    <span><b>GOLDEN</b> ACE</span>
+  </a>
+  <div class="hgroup">
+    <span class="who">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>
+      </svg>
+      <span id="who">—</span>
+    </span>
+    <div class="bal">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5" stroke-dasharray="2 2.5"/>
+      </svg>
+      <span id="bal">—</span>
+    </div>
+    <button onclick="logout()">Wyloguj</button>
+  </div>
+</header>
+
+<main id="game">
+<div class="top">
+  <a href="/" style="text-decoration:none"><button>
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 12H5M12 19l-7-7 7-7"/>
+    </svg>
+    Lobby
+  </button></a>
+  <h2>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2l3 6 6 .9-4.5 4.4 1.1 6.2L12 16.6 6.4 19.5l1.1-6.2L3 8.9 9 8z"/>
+    </svg>
+    Kopalnia
+  </h2>
+  <span style="width:80px"></span>
+</div>
+
+<div class="layout">
+  <div class="pit">
+    <div class="stats">
+      <div><small>Teraz</small><b id="sNow">1.00×</b></div>
+      <div><small>Następne pole</small><b id="sNext">–</b></div>
+      <div><small>Wypłata</small><b id="sWin">0</b></div>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="ctl">
+    <div class="grp">
+      <span>Liczba min (1–24)</span>
+      <input id="mines" type="number" min="1" max="24" value="3" inputmode="numeric">
+      <div class="seg" id="mq">
+        <button class="q" data-v="1">1</button>
+        <button class="q" data-v="3">3</button>
+        <button class="q" data-v="5">5</button>
+        <button class="q" data-v="10">10</button>
+        <button class="q" data-v="24">24</button>
+      </div>
+    </div>
+
+    <div class="grp">
+      <span>Stawka</span>
+      <input id="bet" type="number" min="1" step="1" value="10" inputmode="numeric">
+      <div class="seg">
+        <button class="q" data-b="10">10</button>
+        <button class="q" data-b="50">50</button>
+        <button class="q" data-m="0.5">½</button>
+        <button class="q" data-m="2">2×</button>
+        <button class="q" data-m="max">Max</button>
+      </div>
+    </div>
+
+    <button id="main">Zacznij grę</button>
+    <button class="q" id="rnd">Losowe pole</button>
+
+    <div class="hist" id="hist" aria-label="Ostatnie rundy"></div>
+
+    <div class="foot">
+      Odkrywaj 💎 i unikaj 💣. Każde bezpieczne pole podnosi mnożnik, a wypłacić możesz w dowolnej chwili. Spacja = start / wypłata. Zwrot gracza: 97%.
+    </div>
+  </div>
+</div>
+</main>
+
+<script>
+/* ============ API ============ */
+const $ = s => document.querySelector(s);
+const token = localStorage.getItem('ga_token') || '';
+let me = null;
+
+async function api(path, method='GET', body){
+  const h = { 'Content-Type':'application/json' };
+  if (token) h['Authorization'] = 'Bearer ' + token;
+  try{
+    const r = await fetch(path, { method, headers:h, body: body?JSON.stringify(body):undefined });
+    let d = null; try{ d = await r.json(); }catch(e){}
+    return { ok:r.ok, status:r.status, data:d };
+  }catch(e){ return { ok:false, status:0, data:{ error:'Brak połączenia z serwerem' } }; }
+}
+async function logout(){
+  try{ await api('/api/logout','POST'); }catch(e){}
+  localStorage.removeItem('ga_token');
+  location.href = '/';
+}
+
+/* ============ STAN ============ */
+let bal = 0;
+let hist = [];
+let active = false, bet = 0, M = 3, k = 0;
+let mines = new Set();
+let shown = Array(25).fill(0);
+let msg = '', msgCol = '';
+
+const C = (n,r) => { let x = 1; for (let i=1;i<=r;i++) x = x*(n-r+i)/i; return x; };
+const mult = (m, r) => r === 0 ? 1 : Math.floor(97 * C(25, r) / C(25 - m, r)) / 100;
+
+const getBet = () => Math.max(1, Math.floor(parseFloat($('#bet').value) || 0));
+const getM   = () => Math.min(24, Math.max(1, Math.floor(parseFloat($('#mines').value) || 1)));
+const fmt    = x => x >= 100 ? x.toFixed(0) : x.toFixed(2);
+
+/* ============ GRID ============ */
+const grid = $('#grid');
+for (let i=0;i<25;i++){
+  const b = document.createElement('button');
+  b.className = 't';
+  b.setAttribute('aria-label', 'Pole ' + (i+1));
+  b.onclick = () => pick(i);
+  grid.appendChild(b);
+}
+
+/* ============ RENDER ============ */
+function render(){
+  const m = active ? M : getM();
+
+  $('#bal').textContent = Number(bal).toLocaleString('pl-PL');
+  if (me) $('#who').textContent = me.username;
+
+  $('#hist').innerHTML = hist.slice().reverse().map(x =>
+    `<span class="chip ${x>0?'w':'l'}">${x>0?fmt(x)+'×':'💣'}</span>`
+  ).join('');
+
+  grid.querySelectorAll('.t').forEach((t,i) => {
+    const s = shown[i];
+    t.className = 't' + (s===1 ? ' gem' : s===2 ? ' bomb' : (s===3 || s===4) ? ' dim' : '');
+    t.textContent = (s===1 || s===3) ? '💎' : (s===2 || s===4) ? '💣' : '';
+    t.disabled = !active || s !== 0;
+  });
+
+  const now = mult(m, k);
+  const nxt = k < 25 - m ? mult(m, k + 1) : null;
+  $('#sNow').textContent = fmt(now) + '×';
+  $('#sNext').textContent = nxt ? fmt(nxt) + '×' : '–';
+  $('#sWin').textContent = active && k > 0 ? (bet * now).toFixed(2) : '0';
+
+  const mb = $('#main');
+  mb.className = '';
+  mb.disabled = false;
+  if (!active){
+    mb.textContent = bal < 1 || getBet() > bal ? 'Brak żetonów' : 'Zacznij grę (' + getBet() + ')';
+    mb.disabled = getBet() > bal;
+  } else if (k === 0){
+    mb.textContent = 'Wybierz pole';
+    mb.disabled = true;
+  } else {
+    mb.className = 'cash';
+    mb.textContent = 'Wypłać ' + (bet * now).toFixed(2);
+  }
+
+  $('#rnd').disabled = !active;
+  document.querySelectorAll('#mq .q').forEach(b => {
+    b.disabled = active;
+    b.classList.toggle('on', +b.dataset.v === m);
+  });
+  $('#mines').disabled = active;
+
+  $('#msg').textContent = msg;
+  $('#msg').style.color = msgCol || 'var(--text)';
+}
+
+/* ============ AKCJA ============ */
+function start(){
+  if (active) return;
+  const b = getBet();
+  if (b > bal) return;
+  bal -= b;
+  bet = b; M = getM(); k = 0;
+  shown = Array(25).fill(0);
+  msg = ''; msgCol = '';
+  mines = new Set();
+  while (mines.size < M) mines.add(Math.floor(Math.random() * 25));
+  active = true;
+  render();
+}
+
+function revealAll(){
+  for (let i=0;i<25;i++) if (shown[i] === 0) shown[i] = mines.has(i) ? 4 : 3;
+}
+
+async function settle(payout, resultMsg, col, chipVal){
+  active = false;
+  revealAll();
+  hist.push(chipVal);
+  hist = hist.slice(-14);
+  msg = resultMsg;
+  msgCol = col;
+  render();
+
+  const r = await api('/api/mines/settle', 'POST', { bet, payout });
+  if (r.ok && r.data?.user){ me = r.data.user; bal = me.balance; render(); }
+  else if (r.status === 401){ localStorage.removeItem('ga_token'); location.href='/'; return; }
+  else if (!r.ok){ $('#msg').textContent = r.data?.error || 'Błąd zapisu'; }
+}
+
+function pick(i){
+  if (!active || shown[i] !== 0) return;
+  if (mines.has(i)){
+    shown[i] = 2;
+    const lost = bet;
+    settle(0, 'Bum! −' + lost.toLocaleString('pl-PL'), 'var(--bomb)', 0);
+    return;
+  }
+  shown[i] = 1;
+  k++;
+  if (k === 25 - M){
+    const m = mult(M, k);
+    const win = Math.floor(bet * m);
+    bal += win;
+    settle(win, 'Wypłacono +' + (win - bet).toLocaleString('pl-PL') + ' (' + fmt(m) + '×)', 'var(--green)', m);
+    return;
+  }
+  render();
+}
+
+function cash(){
+  if (!active || k === 0) return;
+  const m = mult(M, k);
+  const win = Math.floor(bet * m);
+  bal += win;
+  settle(win, 'Wypłacono +' + (win - bet).toLocaleString('pl-PL') + ' (' + fmt(m) + '×)', 'var(--green)', m);
+}
+
+/* ============ INTERAKCJE ============ */
+$('#main').onclick = () => active ? cash() : start();
+$('#rnd').onclick = () => {
+  if (!active) return;
+  const h = [];
+  shown.forEach((s,i) => { if (s === 0) h.push(i); });
+  if (h.length) pick(h[Math.floor(Math.random() * h.length)]);
+};
+
+document.querySelectorAll('#mq .q').forEach(b => {
+  b.onclick = () => { if (!active){ $('#mines').value = b.dataset.v; render(); } };
+});
+
+document.querySelectorAll('.q[data-b], .q[data-m]').forEach(b => {
+  b.onclick = () => {
+    if (active) return;
+    const s = b.dataset;
+    let v = getBet();
+    v = s.b ? +s.b : s.m === 'max' ? Math.floor(bal) : Math.max(1, Math.floor(v * +s.m));
+    $('#bet').value = Math.max(1, Math.min(v, Math.max(1, Math.floor(bal))));
+    render();
+  };
+});
+
+$('#bet').oninput = render;
+$('#mines').oninput = render;
+
+addEventListener('keydown', e => {
+  if (e.code === 'Space' && !/INPUT/.test(document.activeElement.tagName)){
+    e.preventDefault();
+    $('#main').click();
+  }
+});
+
+/* ============ ODSWIEZANIE SALDA ============ */
+async function refreshMe(){
+  if (!token) return;
+  if (active) return;
+  try {
+    const r = await api('/api/me');
+    if (!r.ok){
+      if (r.status === 401){ localStorage.removeItem('ga_token'); location.href = '/'; }
+      return;
+    }
+    if (!r.data?.user) return;
+    me = r.data.user;
+    bal = me.balance;
+    render();
+  } catch(e){}
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') refreshMe();
+});
+window.addEventListener('focus', refreshMe);
+window.addEventListener('pageshow', e => { if (e.persisted) refreshMe(); });
+
+/* ============ START ============ */
+(async function(){
+  if (!token){ location.href = '/'; return; }
+  const r = await api('/api/me');
+  if (!r.ok || !r.data?.user){
+    localStorage.removeItem('ga_token');
+    location.href = '/';
+    return;
+  }
+  me = r.data.user;
+  bal = me.balance;
+  render();
+})();
+</script></body></html>

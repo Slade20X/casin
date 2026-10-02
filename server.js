@@ -272,6 +272,124 @@ app.post('/api/blackjack/settle', auth, async (req, res) => {
   res.json({ user: pub(u) });
 });
 
+/* ============ CRASH (Rakieta) ============ */
+app.post('/api/crash/settle', auth, async (req, res) => {
+  const bet    = Math.floor(Number(req.body?.bet));
+  const payout = Math.floor(Number(req.body?.payout));
+  if (!Number.isFinite(bet) || bet <= 0 || bet > 1_000_000)
+    return res.status(400).json({ error: 'Nieprawidłowy zakład' });
+  if (!Number.isFinite(payout) || payout < 0 || payout > 10_000_000)
+    return res.status(400).json({ error: 'Nieprawidłowa wypłata' });
+  if (bet > req.user.balance)
+    return res.status(400).json({ error: 'Za mało żetonów' });
+
+  const u = req.user;
+  u.balance      = u.balance - bet + payout;
+  u.totalWagered += bet;
+  u.totalWon     += payout;
+  u.spins        += 1;
+  if (payout > 0) u.wins += 1;
+  if (payout > u.biggestWin) u.biggestWin = payout;
+  await save();
+  res.json({ user: pub(u) });
+});
+
+/* ============ PLINKO ============ */
+const PLINKO_RISK = {
+  low:  { p: 2,   a: .35 },
+  med:  { p: 3,   a: .12 },
+  high: { p: 4.5, a: .03 }
+};
+const PLINKO_ROWS = [8, 12, 16];
+
+function plinkoMult(rows, risk, k){
+  const p = PLINKO_RISK[risk].p, a = PLINKO_RISK[risk].a;
+  const N = rows;
+  const Cn = (nn, kk) => { let r = 1; for (let i=1;i<=kk;i++) r = r*(nn-kk+i)/i; return r; };
+  const dist = kk => Math.abs(kk - N/2) / (N/2);
+  let sum = 0;
+  for (let i=0;i<=N;i++) sum += Cn(N,i) / Math.pow(2, N) * (a + Math.pow(dist(i), p));
+  const s = 0.97 / sum;
+  return Math.round(s * (a + Math.pow(dist(k), p)) * 100) / 100;
+}
+
+app.post('/api/plinko/drop', auth, async (req, res) => {
+  const bet  = Math.floor(Number(req.body?.bet));
+  const rows = Number(req.body?.rows);
+  const risk = String(req.body?.risk || '');
+
+  if (!Number.isFinite(bet) || bet <= 0 || bet > 1_000_000)
+    return res.status(400).json({ error: 'Nieprawidłowy zakład' });
+  if (!PLINKO_ROWS.includes(rows))
+    return res.status(400).json({ error: 'Nieprawidłowa liczba rzędów' });
+  if (!PLINKO_RISK[risk])
+    return res.status(400).json({ error: 'Nieprawidłowy poziom ryzyka' });
+  if (bet > req.user.balance)
+    return res.status(400).json({ error: 'Za mało żetonów' });
+
+  // losowanie ścieżki: ile razy kulka poleci w prawo (0..rows)
+  let slot = 0;
+  for (let i=0;i<rows;i++) if (crypto.randomInt(0,2) === 1) slot++;
+
+  const mult = plinkoMult(rows, risk, slot);
+  const win  = Math.floor(bet * mult);
+
+  const u = req.user;
+  u.balance      = u.balance - bet + win;
+  u.totalWagered += bet;
+  u.totalWon     += win;
+  u.spins        += 1;
+  if (win > 0) u.wins += 1;
+  if (win > u.biggestWin) u.biggestWin = win;
+  await save();
+
+  res.json({ slot, mult, win, user: pub(u) });
+});
+
+/* ============ MINES (Kopalnia) ============ */
+app.post('/api/mines/settle', auth, async (req, res) => {
+  const bet    = Math.floor(Number(req.body?.bet));
+  const payout = Math.floor(Number(req.body?.payout));
+  if (!Number.isFinite(bet) || bet <= 0 || bet > 1_000_000)
+    return res.status(400).json({ error: 'Nieprawidłowy zakład' });
+  if (!Number.isFinite(payout) || payout < 0 || payout > 10_000_000)
+    return res.status(400).json({ error: 'Nieprawidłowa wypłata' });
+  if (bet > req.user.balance)
+    return res.status(400).json({ error: 'Za mało żetonów' });
+
+  const u = req.user;
+  u.balance      = u.balance - bet + payout;
+  u.totalWagered += bet;
+  u.totalWon     += payout;
+  u.spins        += 1;
+  if (payout > 0) u.wins += 1;
+  if (payout > u.biggestWin) u.biggestWin = payout;
+  await save();
+  res.json({ user: pub(u) });
+});
+
+/* ============ KENO ============ */
+app.post('/api/keno/settle', auth, async (req, res) => {
+  const bet    = Math.floor(Number(req.body?.bet));
+  const payout = Math.floor(Number(req.body?.payout));
+  if (!Number.isFinite(bet) || bet <= 0 || bet > 1_000_000)
+    return res.status(400).json({ error: 'Nieprawidłowy zakład' });
+  if (!Number.isFinite(payout) || payout < 0 || payout > 10_000_000)
+    return res.status(400).json({ error: 'Nieprawidłowa wypłata' });
+  if (bet > req.user.balance)
+    return res.status(400).json({ error: 'Za mało żetonów' });
+
+  const u = req.user;
+  u.balance      = u.balance - bet + payout;
+  u.totalWagered += bet;
+  u.totalWon     += payout;
+  u.spins        += 1;
+  if (payout > 0) u.wins += 1;
+  if (payout > u.biggestWin) u.biggestWin = payout;
+  await save();
+  res.json({ user: pub(u) });
+});
+
 /* ============ SLOTY ============ */
 app.post('/api/slots/spin', auth, async (req, res) => {
   try {
