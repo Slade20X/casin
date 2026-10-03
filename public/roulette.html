@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Ruletka 3D — Golden Ace</title>
+<title>Ruletka LIVE — Golden Ace</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -12,7 +12,6 @@
   --text:#ffffff; --muted:#8a9fb2; --muted-2:#b1bad3;
   --accent:#f0b90b; --accent-2:#ffd54a;
   --green:#00e701; --red:#ff4d4d;
-  --gold:#f0b90b;
   --radius:12px; --radius-lg:16px;
 }
 *{box-sizing:border-box}
@@ -21,14 +20,13 @@ html,body{
   background:var(--bg);color:var(--text);
   font-family:'Manrope',system-ui,-apple-system,sans-serif;font-weight:500;
   overflow:hidden;
-  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  -webkit-font-smoothing:antialiased;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
 }
 h1,h2,h3{font-family:'Manrope',sans-serif;font-weight:800;margin:0;letter-spacing:-0.025em}
 .icon{width:1em;height:1em;display:inline-block;vertical-align:-0.14em;flex-shrink:0;stroke-width:1.8}
 
-/* ============ HEADER ============ */
 header{
   position:sticky;top:0;z-index:50;flex-shrink:0;
   display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
@@ -64,15 +62,9 @@ button{
 button:hover:not(:disabled){border-color:var(--border-2);background:var(--panel-2)}
 button:disabled{opacity:.4;cursor:not-allowed}
 button .icon{width:16px;height:16px}
-button.primary{
-  background:linear-gradient(180deg,var(--accent-2),var(--accent));
-  border-color:var(--accent);color:#1a1500;
-}
-button.primary:hover:not(:disabled){filter:brightness(1.08)}
 
-/* ============ LAYOUT ============ */
 body{display:flex;flex-direction:column;height:100vh}
-#app{flex:1;display:grid;grid-template-columns:minmax(0,1fr) clamp(520px,46vw,880px);min-height:0}
+#app{flex:1;display:grid;grid-template-columns:minmax(0,1fr) clamp(560px,48vw,900px);min-height:0}
 #stage{position:relative;min-width:0;overflow:hidden;background:#050203}
 #gl{display:block;width:100%;height:100%;cursor:default}
 #ui{
@@ -81,24 +73,34 @@ body{display:flex;flex-direction:column;height:100vh}
   border-left:1px solid var(--border);
 }
 
-/* ============ STAGE overlay ============ */
+/* --- STAGE overlay --- */
 .ttl{
   position:absolute;top:14px;left:0;right:0;text-align:center;
   font:800 22px 'Manrope',sans-serif;letter-spacing:.32em;
   color:#fff2b0;text-shadow:0 0 12px rgba(255,179,0,.8),0 0 30px rgba(255,122,0,.6);
   pointer-events:none;text-transform:uppercase;
 }
-.hud{
-  position:absolute;left:18px;bottom:20px;
-  display:flex;flex-direction:column;gap:10px;align-items:flex-start;
-  pointer-events:none;max-width:340px;
+#statusbar{
+  position:absolute;top:56px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:16px;
+  background:rgba(0,0,0,.62);border:1px solid var(--border-2);
+  border-radius:14px;padding:10px 20px;z-index:6;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  box-shadow:0 10px 30px -10px rgba(0,0,0,.8);
 }
+#status{font-weight:800;font-size:14px;letter-spacing:.12em;text-transform:uppercase}
+#status.open{color:var(--green)}
+#status.closed{color:var(--red)}
+#cd{font-variant-numeric:tabular-nums;font-weight:800;font-size:24px;color:var(--accent-2);min-width:86px;text-align:right}
+#cd.spinning{color:var(--muted-2)}
+
+.hud{position:absolute;left:18px;bottom:20px;display:flex;flex-direction:column;gap:10px;pointer-events:none;max-width:340px}
 #hist{display:flex;gap:5px;flex-wrap:wrap;min-height:28px;justify-content:flex-start}
 #res{
   position:absolute;left:16px;right:16px;bottom:90px;margin:0;
   text-align:center;font-size:18px;font-weight:800;
   text-shadow:0 2px 8px #000;pointer-events:none;color:var(--accent-2);
-  display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;min-height:52px;
+  display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;min-height:52px;
 }
 .dot{
   width:30px;height:30px;border-radius:8px;
@@ -112,7 +114,7 @@ body{display:flex;flex-direction:column;height:100vh}
 .black{background:linear-gradient(180deg,#2a2a2a,#111)}
 .green{background:linear-gradient(180deg,#0a8a3f,#065f29)}
 
-/* ============ PANEL (prawa strona) ============ */
+/* --- PANEL --- */
 .panel-sec{
   background:var(--panel);border:1px solid var(--border);
   border-radius:var(--radius-lg);padding:14px;margin-bottom:14px;
@@ -125,16 +127,12 @@ body{display:flex;flex-direction:column;height:100vh}
 .panel-sec-head::after{content:"";flex:1;height:1px;background:var(--border)}
 .panel-sec-head svg{width:14px;height:14px;color:var(--accent)}
 
-/* felt + betting grid */
 #bw{width:100%}
 .felt{
   width:768px;margin:0 auto;padding:14px;
   border:1px solid var(--border-2);border-radius:var(--radius-lg);
   background:radial-gradient(ellipse at 50% 30%,#0f6b3d,#083d23 70%,#04231a);
-  box-shadow:
-    inset 0 0 60px rgba(0,0,0,.55),
-    0 0 0 2px rgba(240,185,11,.35),
-    0 20px 40px -20px #000c;
+  box-shadow:inset 0 0 60px rgba(0,0,0,.55),0 0 0 2px rgba(240,185,11,.35),0 20px 40px -20px #000c;
   transform-origin:top left;
 }
 #board{position:relative;width:720px;height:248px}
@@ -147,8 +145,6 @@ body{display:flex;flex-direction:column;height:100vh}
 }
 .c.hl{background:rgba(240,185,11,.22)}
 .c.o:hover{background:rgba(255,255,255,.08)}
-.c.win{animation:pulse .5s 6}
-@keyframes pulse{50%{background:var(--accent);color:#000}}
 .ov{
   display:grid;place-items:center;width:34px;height:42px;border-radius:8px;
   font:800 15px 'Manrope',sans-serif;color:#fff;
@@ -164,43 +160,66 @@ body{display:flex;flex-direction:column;height:100vh}
 .sp:hover{background:rgba(240,185,11,.22);box-shadow:0 0 10px rgba(240,185,11,.4)}
 .chip{
   position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-  width:28px;height:28px;border-radius:50%;
+  min-width:28px;height:28px;padding:0 6px;border-radius:14px;
   border:2px solid rgba(255,255,255,.9);
-  font:800 10px 'Manrope',sans-serif;
+  font:800 11px 'Manrope',sans-serif;
   display:grid;place-items:center;color:#fff;
   pointer-events:none;z-index:9;
   box-shadow:0 3px 8px rgba(0,0,0,.5),inset 0 -3px 6px rgba(0,0,0,.4);
+  font-variant-numeric:tabular-nums;
+}
+.cbadge{
+  position:absolute;top:3px;right:3px;
+  min-width:18px;height:18px;padding:0 4px;border-radius:9px;
+  background:linear-gradient(180deg,var(--accent-2),var(--accent));
+  color:#1a1500;font-size:10px;font-weight:900;
+  display:grid;place-items:center;z-index:10;pointer-events:none;
+  border:1px solid #fff;
+  box-shadow:0 2px 4px rgba(0,0,0,.5);
 }
 
-/* chips */
-.chips{display:flex;gap:10px;justify-content:center;margin:0;flex-wrap:wrap}
+/* chips panel (10 chips) */
+.chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:0}
 .ch{
-  width:54px;height:54px;border-radius:50%;
+  width:52px;height:52px;border-radius:50%;
   border:3px solid rgba(255,255,255,.85);
-  font-weight:900;font-size:13px;padding:0;color:#fff;
+  font-weight:900;font-size:12px;padding:0;color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,.6);
   box-shadow:0 6px 12px rgba(0,0,0,.4),inset 0 -4px 8px rgba(0,0,0,.35);
-  transition:.15s;
+  transition:.15s;font-variant-numeric:tabular-nums;
 }
 .ch:hover:not(:disabled){transform:translateY(-3px);filter:brightness(1.15)}
-.ch.sel{transform:scale(1.12);box-shadow:0 0 0 3px rgba(240,185,11,.35),0 8px 18px rgba(0,0,0,.5)}
+.ch.sel{transform:scale(1.14);box-shadow:0 0 0 3px rgba(240,185,11,.45),0 8px 18px rgba(0,0,0,.55)}
 
-/* actions */
 .ctrl{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;align-items:center}
-#spin{
-  background:linear-gradient(180deg,var(--accent-2),var(--accent));
-  color:#1a1500;font-size:15px;padding:12px 40px;letter-spacing:.08em;
-  border-color:var(--accent);font-weight:800;min-width:200px;
-}
-#spin:hover:not(:disabled){filter:brightness(1.1)}
-
-.tot{
-  text-align:center;margin:14px 0 0;
-  color:var(--muted-2);font-size:13px;font-weight:600;
-  padding-top:14px;border-top:1px solid var(--border);
-}
+.tot{text-align:center;margin:14px 0 0;color:var(--muted-2);font-size:13px;font-weight:600;padding-top:14px;border-top:1px solid var(--border)}
 .tot b{color:var(--accent-2);font-weight:800;font-size:16px;font-variant-numeric:tabular-nums;margin-left:4px}
 
-/* ============ RESPONSIVE ============ */
+/* players list */
+#players{display:grid;gap:6px;max-height:280px;overflow-y:auto}
+.pl{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:9px 12px;background:var(--bg-2);
+  border:1px solid var(--border);border-radius:10px;font-size:13px;
+}
+.pl.me{border-color:var(--accent);background:rgba(240,185,11,.08)}
+.pl-n{font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl-a{font-variant-numeric:tabular-nums;font-weight:800;color:var(--accent-2);flex-shrink:0;margin-left:8px}
+#players .empty{text-align:center;color:var(--muted);padding:20px 12px;font-size:13px}
+
+/* toast */
+#toast{
+  position:fixed;left:50%;bottom:32px;transform:translate(-50%,24px);
+  background:var(--panel-2);color:var(--text);
+  border:1px solid var(--border-2);border-radius:12px;
+  padding:12px 20px;font-weight:700;font-size:14px;
+  opacity:0;pointer-events:none;transition:.28s;z-index:200;
+  max-width:90vw;text-align:center;
+  box-shadow:0 20px 40px -15px #000c;
+}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#toast.err{border-color:var(--red);color:#ffc0c0}
+
 @media(max-width:1000px){
   html,body{overflow:auto;height:auto}
   body{height:auto;min-height:100vh}
@@ -208,8 +227,12 @@ body{display:flex;flex-direction:column;height:100vh}
   #stage{height:62vh;min-height:420px}
   #ui{border-left:none;border-top:1px solid var(--border);padding:14px}
   .ttl{font-size:16px;letter-spacing:.22em}
+  #statusbar{top:48px;padding:8px 14px}
+  #status{font-size:12px}
+  #cd{font-size:18px;min-width:64px}
   #res{font-size:15px;bottom:76px}
   .hud{left:12px;bottom:14px}
+  .ch{width:46px;height:46px;font-size:11px}
 }
 </style></head><body>
 
@@ -243,8 +266,12 @@ body{display:flex;flex-direction:column;height:100vh}
 <div id="app">
   <div id="stage">
     <canvas id="gl"></canvas>
-    <div class="ttl">RULETKA</div>
-    <div id="res">Postaw zakłady</div>
+    <div class="ttl">RULETKA LIVE</div>
+    <div id="statusbar">
+      <div id="status" class="open">Łączenie…</div>
+      <div id="cd" class="cd">—</div>
+    </div>
+    <div id="res">Łączenie z serwerem…</div>
     <div class="hud">
       <div id="hist"></div>
     </div>
@@ -256,7 +283,7 @@ body{display:flex;flex-direction:column;height:100vh}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>
         </svg>
-        Zakłady
+        Zakłady (widoczne dla wszystkich)
       </div>
       <div id="bw"><div class="felt" id="felt"><div id="board"></div></div></div>
     </div>
@@ -279,22 +306,25 @@ body{display:flex;flex-direction:column;height:100vh}
         Akcje
       </div>
       <div class="ctrl">
-        <button id="undo" onclick="undo()">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/>
-          </svg>
-          Cofnij
-        </button>
-        <button id="clr" onclick="clearBets()">Wyczyść</button>
-        <button id="rep" onclick="repeat()">Powtórz</button>
+        <button id="undo" onclick="undo()">Cofnij</button>
+        <button id="clr" onclick="clearBets()">Wyczyść moje</button>
       </div>
-      <div style="display:flex;justify-content:center;margin-top:12px">
-        <button id="spin" onclick="spin()">ZAKRĘĆ</button>
+      <p class="tot">Moja stawka: <b id="tot">0</b></p>
+    </div>
+
+    <div class="panel-sec">
+      <div class="panel-sec-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>
+        </svg>
+        Gracze w tej rundzie
       </div>
-      <p class="tot">Łączna stawka: <b id="tot">0</b></p>
+      <div id="players"><div class="empty">Brak zakładów</div></div>
     </div>
   </aside>
 </div>
+
+<div id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -312,7 +342,7 @@ async function api(path, method='GET', body){
   }catch(e){ return { ok:false, status:0, data:{ error:'Brak połączenia z serwerem' } }; }
 }
 async function logout(){
-  await api('/api/logout','POST');
+  try { await api('/api/logout','POST'); } catch(e){}
   localStorage.removeItem('ga_token');
   location.href = '/';
 }
@@ -333,14 +363,35 @@ function rule(k){
   return OUTR[k];
 }
 const numsOf=k=>[...Array(37).keys()].filter(rule(k)[1]);
-const CHIPC={5:'#c0182b',10:'#1d5fbf',25:'#0a8a3f',100:'#2a2a2a',500:'#7b2cbf'};
-const chipColor=v=>v<10?CHIPC[5]:v<25?CHIPC[10]:v<100?CHIPC[25]:v<500?CHIPC[100]:CHIPC[500];
 
-let bal=0, chip=10, bets={}, stack=[], last=null, busy=false, W=0;
-const $=id=>document.getElementById(id);
-const STEP=Math.PI*2/37;
+/* --- Żetony (10 nominałów) --- */
+const CHIPS = [5, 10, 25, 100, 500, 1000, 2000, 5000, 10000, 25000];
+const CHIPC = {
+  5:'#c0182b', 10:'#1d5fbf', 25:'#0a8a3f', 100:'#2a2a2a',
+  500:'#7b2cbf', 1000:'#0891b2', 2000:'#ea580c', 5000:'#db2777',
+  10000:'#ca8a04', 25000:'#dc2626'
+};
+const chipLabel = v => v >= 1000 ? (v/1000) + 'k' : String(v);
+function chipColor(v){
+  let c = CHIPC[5];
+  for (const d of CHIPS) if (v >= d) c = CHIPC[d];
+  return c;
+}
 
-/* ===================== STÓŁ / ZAKŁADY ===================== */
+/* ===================== STAN ===================== */
+let bal = 0, chip = 100;
+let myBets = {};         // moje zakłady w bieżącej rundzie
+let stack = [];          // historia do cofania (localny)
+let state = null;        // ostatni stan z serwera
+let busy = false;        // trwa request
+let clockSkew = 0;       // serwer - klient (ms)
+let lastAnimatedRound = -1;
+let animating = false;
+let W = 0;               // rotacja koła (radiany)
+const STEP = Math.PI*2/37;
+const $ = id => document.getElementById(id);
+
+/* ===================== STÓŁ ===================== */
 function build(){
   let h='';
   const add=(cls,x,y,w,hh,inner,k)=>{h+=`<div class="${cls}" style="left:${x}px;top:${y}px;width:${w}px;height:${hh}px" data-k="${k}">${inner}</div>`};
@@ -369,14 +420,8 @@ function build(){
   sp(40,48,16,16,[0,2,3]); sp(40,104,16,16,[0,1,2]);
 
   $('board').innerHTML=h;
-  drawChips();
-  render();
 }
-function drawChips(){
-  $('chips').innerHTML=[5,10,25,100,500].map(v=>
-    `<button class="ch ${v===chip?'sel':''}" style="background:${CHIPC[v]}" ${busy?'disabled':''} onclick="chip=${v};drawChips()">${v}</button>`
-  ).join('');
-}
+
 const B = $('board');
 B.addEventListener('click', e => { const t = e.target.closest('[data-k]'); if (t) bet(t.dataset.k); });
 B.addEventListener('mouseover', e => {
@@ -386,65 +431,178 @@ B.addEventListener('mouseover', e => {
 });
 B.addEventListener('mouseleave', () => B.querySelectorAll('.hl').forEach(x => x.classList.remove('hl')));
 
-const total = () => Object.values(bets).reduce((a,b) => a+b, 0);
-function render(){
-  B.querySelectorAll('.chip').forEach(x => x.remove());
-  B.querySelectorAll('[data-k]').forEach(el => {
-    const v = bets[el.dataset.k];
-    if (v) el.insertAdjacentHTML('beforeend',
-      `<span class="chip" style="background:${chipColor(v)}">${v>=1000?(v/1000).toFixed(1).replace('.0','')+'k':v}</span>`);
-  });
-  $('bal').textContent = Number(bal).toLocaleString('pl-PL');
-  $('tot').textContent = total().toLocaleString('pl-PL');
+function fit(){
+  const w = $('bw').clientWidth;
+  if (w > 0) $('felt').style.zoom = Math.min(1, w/768);
 }
-function bet(k){
-  if (busy) return;
-  if (chip > bal){ $('res').textContent = 'Za mało żetonów!'; return; }
-  bal -= chip; bets[k] = (bets[k]||0) + chip; stack.push([k, chip]); render();
-}
-function undo(){
-  if (busy || !stack.length) return;
-  const [k,v] = stack.pop(); bal += v; bets[k] -= v;
-  if (!bets[k]) delete bets[k];
-  render();
-}
-function clearBets(){ if (busy) return; bal += total(); bets = {}; stack = []; render(); }
-function repeat(){
-  if (busy || !last) return;
-  clearBets();
-  const t = Object.values(last).reduce((a,b)=>a+b,0);
-  if (t > bal){ $('res').textContent = 'Za mało żetonów na powtórkę'; return; }
-  for (const k in last){ bets[k] = last[k]; stack.push([k, last[k]]); }
-  bal -= t; render();
-}
-function fit(){ const w = $('bw').clientWidth; if (w > 0) $('felt').style.zoom = Math.min(1, w/768); }
 addEventListener('resize', fit);
 
-/* ===================== FINISH (z serwera) ===================== */
-function finish(num, win, net, user){
-  if (user){ me = user; bal = user.balance; }
-  const stake = win - net;
+/* ===================== RENDER ===================== */
+function renderChips(){
+  const dis = busy || !state || !state.betting;
+  $('chips').innerHTML = CHIPS.map(v =>
+    `<button class="ch ${v===chip?'sel':''}" style="background:${CHIPC[v]}" ${dis?'disabled':''} onclick="setChip(${v})">${chipLabel(v)}</button>`
+  ).join('');
+}
+function setChip(v){ chip = v; renderChips(); }
 
-  const d = document.createElement('div');
-  d.className = 'dot ' + col(num); d.textContent = num;
-  $('hist').prepend(d);
-  if ($('hist').children.length > 12) $('hist').lastChild.remove();
+function renderBoard(){
+  // Usuń stare chipy i badge
+  B.querySelectorAll('.chip,.cbadge').forEach(x => x.remove());
 
-  $('res').innerHTML =
-    `<span class="dot big ${col(num)}">${num}</span><span>` +
-    (win
-      ? `<span style="color:var(--green)">wygrana ${win.toLocaleString('pl-PL')} (${net>=0?'+':''}${net.toLocaleString('pl-PL')})</span>`
-      : `<span style="color:var(--red)">przegrana −${stake.toLocaleString('pl-PL')}</span>`) +
-    `</span>`;
+  // Zsumuj wszystkie zakłady graczy
+  const totals = {}, counts = {};
+  if (state?.bets) {
+    for (const uname in state.bets) {
+      const ub = state.bets[uname] || {};
+      for (const k in ub) {
+        totals[k] = (totals[k] || 0) + Number(ub[k]);
+        counts[k] = (counts[k] || 0) + 1;
+      }
+    }
+  }
 
-  render();
-  B.querySelectorAll('.c').forEach(c => { if (win && rule(c.dataset.k)[1](num)) c.classList.add('win'); });
-  busy = false;
-  ['spin','undo','clr','rep'].forEach(i => $(i).disabled = false);
-  drawChips();
+  B.querySelectorAll('[data-k]').forEach(el => {
+    const k = el.dataset.k;
+    const tot = totals[k];
+    if (!tot) return;
+
+    const c = document.createElement('span');
+    c.className = 'chip';
+    c.style.background = chipColor(tot);
+    c.textContent = tot >= 1000 ? (tot/1000).toFixed(1).replace('.0','')+'k' : tot;
+    el.appendChild(c);
+
+    if (counts[k] > 1) {
+      const b = document.createElement('span');
+      b.className = 'cbadge';
+      b.textContent = counts[k];
+      el.appendChild(b);
+    }
+  });
+
+  // Moja suma
+  let myTot = 0;
+  for (const k in myBets) myTot += Number(myBets[k]);
+  $('tot').textContent = myTot.toLocaleString('pl-PL');
+  $('bal').textContent = Number(bal).toLocaleString('pl-PL');
 }
 
-/* ===================== 3D (nietknięte) ===================== */
+function renderPlayers(){
+  const rows = [];
+  if (state?.bets) {
+    for (const uname in state.bets) {
+      let total = 0;
+      for (const k in state.bets[uname]) total += Number(state.bets[uname][k]);
+      if (total > 0) rows.push({ uname, total });
+    }
+  }
+  rows.sort((a,b) => b.total - a.total);
+
+  const el = $('players');
+  if (!rows.length) {
+    el.innerHTML = '<div class="empty">Brak zakładów w tej rundzie</div>';
+    return;
+  }
+  const my = me?.username;
+  el.innerHTML = rows.map(r => `
+    <div class="pl ${r.uname===my?'me':''}">
+      <span class="pl-n">${esc(r.uname)}</span>
+      <span class="pl-a">${r.total.toLocaleString('pl-PL')}</span>
+    </div>
+  `).join('');
+}
+
+function updateStatus(){
+  if (!state) return;
+  const now = Date.now() + clockSkew;
+  const st = $('status');
+  const cd = $('cd');
+
+  if (state.betting) {
+    const left = Math.max(0, state.betEndsAt - now);
+    st.textContent = 'Zakłady otwarte';
+    st.className = 'open';
+    cd.textContent = (left/1000).toFixed(1) + 's';
+    cd.className = 'cd';
+  } else {
+    const left = Math.max(0, state.roundEndsAt - now);
+    st.textContent = 'Zakłady zamknięte';
+    st.className = 'closed';
+    cd.textContent = (left/1000).toFixed(1) + 's';
+    cd.className = 'cd spinning';
+  }
+  // przyciski
+  $('undo').disabled = !state.betting || !stack.length || busy;
+  $('clr').disabled  = !state.betting || !Object.keys(myBets).length || busy;
+}
+
+/* ===================== AKCJE ===================== */
+let toastT;
+function toast(msg, err){
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = err ? 'err on' : 'on';
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.className = '', 2400);
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function bet(k){
+  if (busy || !state || !state.betting) return;
+  if (chip > bal) { toast('Za mało żetonów', true); return; }
+  busy = true; renderChips();
+  const r = await api('/api/roulette/bet', 'POST', { delta: { [k]: chip } });
+  busy = false;
+  if (!r.ok) {
+    if (r.status === 401) { logout(); return; }
+    toast(r.data?.error || 'Błąd', true);
+    renderChips(); updateStatus();
+    return;
+  }
+  me = r.data.user;
+  bal = r.data.user.balance;
+  myBets = r.data.myBets || {};
+  stack.push([k, chip]);
+  renderBoard(); renderChips(); updateStatus();
+}
+
+async function undo(){
+  if (busy || !state?.betting || !stack.length) return;
+  const [k, v] = stack[stack.length - 1];
+  busy = true; renderChips(); updateStatus();
+  const r = await api('/api/roulette/bet', 'POST', { delta: { [k]: -v } });
+  busy = false;
+  if (!r.ok) {
+    toast(r.data?.error || 'Błąd', true);
+    renderChips(); updateStatus();
+    return;
+  }
+  stack.pop();
+  me = r.data.user;
+  bal = r.data.user.balance;
+  myBets = r.data.myBets || {};
+  renderBoard(); renderChips(); updateStatus();
+}
+
+async function clearBets(){
+  if (busy || !state?.betting || !Object.keys(myBets).length) return;
+  busy = true; renderChips(); updateStatus();
+  const r = await api('/api/roulette/clear', 'POST');
+  busy = false;
+  if (!r.ok) {
+    toast(r.data?.error || 'Błąd', true);
+    renderChips(); updateStatus();
+    return;
+  }
+  me = r.data.user;
+  bal = r.data.user.balance;
+  myBets = {};
+  stack = [];
+  renderBoard(); renderChips(); updateStatus();
+}
+
+/* ===================== 3D (bez zmian wizualnych) ===================== */
 const stage = $('stage');
 const R = new THREE.WebGLRenderer({ canvas: $('gl'), antialias:true });
 R.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -456,7 +614,6 @@ scene.background = new THREE.Color(0x050203);
 scene.fog = new THREE.FogExp2(0x050203, 0.03);
 const cam = new THREE.PerspectiveCamera(42, 1, 0.1, 150);
 
-/* env map dla złota/drewna */
 {
   const pg = new THREE.PMREMGenerator(R), es = new THREE.Scene();
   es.background = new THREE.Color(0x150609);
@@ -481,14 +638,12 @@ const M=(c,r=.5,m=0,e=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,me
 const GOLD=M(0xb08d1e,0.35,0.85,0x080500), WOOD=M(0x3a1b09,0.3,0.15), SILV=M(0xa8a8b0,0.28,0.9);
 const add=(m,y,p=scene)=>{ m.position.y=y; p.add(m); return m; };
 
-/* stół */
 add(new THREE.Mesh(new THREE.CylinderGeometry(11,11,0.6,72), M(0x073d26,0.9)), -0.35);
 const tr = add(new THREE.Mesh(new THREE.TorusGeometry(11,0.55,20,120), WOOD), -0.05); tr.rotation.x = Math.PI/2;
 const tg = add(new THREE.Mesh(new THREE.TorusGeometry(10.5,0.06,10,120), GOLD), 0.22); tg.rotation.x = Math.PI/2;
 const neon = add(new THREE.Mesh(new THREE.TorusGeometry(11.9,0.07,10,140), new THREE.MeshBasicMaterial({color:0x6a1030})), -0.3); neon.rotation.x = Math.PI/2;
 add(new THREE.Mesh(new THREE.CylinderGeometry(5.7,5.9,0.5,72), M(0x2a1408,0.4,0.3)), 0.02);
 
-/* misa */
 const prof = [[.01,0],[5.4,0],[5.4,.9],[5.2,1.15],[4.95,1.15],[4.75,.95],[4.2,.62],[3.78,.45],[3.78,.28]]
   .map(p=>new THREE.Vector2(p[0],p[1]));
 const bowl = new THREE.Mesh(new THREE.LatheGeometry(prof,120), WOOD);
@@ -507,7 +662,6 @@ for(let i=0;i<4;i++){
   scene.add(m);
 }
 
-/* koło */
 const wheel = new THREE.Group(); scene.add(wheel);
 const pm = { red:M(0xc0182b,0.3,0.1), black:M(0x101010,0.3,0.1), green:M(0x0a8a3f,0.3,0.1) };
 function numTex(n){
@@ -553,7 +707,6 @@ for(const rz of [0, Math.PI/2]){
   });
 }
 
-/* kulka */
 const ball = new THREE.Mesh(new THREE.SphereGeometry(0.115,32,24), M(0xeeeeee,0.12,0.3,0x000000));
 ball.visible = false; scene.add(ball);
 function placeBall(a, r, yb=0){
@@ -561,7 +714,6 @@ function placeBall(a, r, yb=0){
   ball.position.set(r*Math.cos(a), y, r*Math.sin(a));
 }
 
-/* fajerwerki */
 const bursts = [];
 function burst(col){
   const n = 140, pos = new Float32Array(n*3), vel = [];
@@ -572,16 +724,14 @@ function burst(col){
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos,3));
   const p = new THREE.Points(g, new THREE.PointsMaterial({
-    color:col, size:0.2, transparent:true,
-    blending:THREE.AdditiveBlending, depthWrite:false
+    color:col, size:0.2, transparent:true, blending:THREE.AdditiveBlending, depthWrite:false
   }));
   scene.add(p);
   bursts.push({ p, vel, t:0 });
 }
 
-/* kamera */
-let th=0.6, el=0.95, dist=17, tEl=0.95, tDist=17,
-    drag=false, spinning=false, rest=0, hitT=-1e9, px=0, py=0;
+let th=0.6, el=0.95, dist=17, tEl=0.95, tDist=17;
+let spinning=false, rest=0, hitT=-1e9;
 const KK = () => Math.min(1.7, Math.max(1, 0.85/cam.aspect));
 const cv = $('gl');
 function rs(){
@@ -638,73 +788,119 @@ function loop(){
 }
 loop();
 
-/* ===================== ZAKRĘĆ (podpięte do serwera) ===================== */
-async function spin(){
+/* ===================== ANIMACJA SPINU ===================== */
+function animateSpin(idx, durationMs){
+  return new Promise(resolve => {
+    spinning = true; ball.visible = true;
+    tDist = 17; tEl = 0.95;
+    const W0 = W;
+    const Wspan = Math.PI*2*5 + Math.random()*6;
+    const Wf = W0 + Wspan;
+    const Bf = Wf + idx*STEP;
+    const Bspan = Math.PI*2*11;
+    const T = durationMs;
+    const t0 = performance.now();
+    let zoomed = false;
+
+    (function f(now){
+      const t = Math.min(1, (now - t0) / T);
+      const e = 1 - Math.pow(1 - t, 3);
+      W = W0 + e*Wspan;
+      const ba = Bf + (1 - e)*Bspan;
+      const dd = Math.min(1, Math.max(0, (t - 0.55) / 0.45));
+      const sm = dd*dd*(3 - 2*dd);
+      let rr = 4.45 - (4.45 - 3.2)*sm, yb = 0;
+      if (t > 0.55 && !zoomed){ zoomed = true; tDist = 10.5; tEl = 0.8; }
+      if (t > 0.85 && t < 1){
+        const q = (1 - t) * 6;
+        rr += Math.sin((t - 0.85)*75) * 0.05 * q * 0.5;
+        yb  = Math.abs(Math.sin((t - 0.85)*60)) * 0.1 * q;
+      }
+      placeBall(ba, rr, yb);
+      if (t < 1) requestAnimationFrame(f);
+      else {
+        spinning = false;
+        rest = idx;
+        resolve();
+      }
+    })(t0);
+  });
+}
+
+/* ===================== POLLING ===================== */
+async function poll(){
   if (busy) return;
-  if (!total()){ $('res').textContent = 'Najpierw postaw zakład!'; return; }
-
-  busy = true;
-  ['spin','undo','clr','rep'].forEach(i => $(i).disabled = true);
-  drawChips();
-  B.querySelectorAll('.win').forEach(e => e.classList.remove('win'));
-  $('res').textContent = 'Kulka się kręci…';
-
-  // serwer losuje idx i liczy wygraną + aktualizuje statystyki
-  const r = await api('/api/spin','POST',{ bets });
-  if (!r.ok){
-    busy = false;
-    ['spin','undo','clr','rep'].forEach(i => $(i).disabled = false);
-    drawChips();
-    if (r.status === 401){ localStorage.removeItem('ga_token'); location.href='/'; return; }
-    $('res').textContent = r.data?.error || 'Błąd serwera';
+  const r = await api('/api/roulette/state');
+  if (!r.ok) {
+    if (r.status === 401) { logout(); return; }
     return;
   }
+  const st = r.data;
 
-  const { idx, num, win, net, user } = r.data;
-  last = { ...bets };
-  bets = {}; stack = [];
+  // nowa runda => reset lokalnej historii undo
+  if (state && state.roundId !== st.roundId) stack = [];
+  state = st;
+  clockSkew = st.serverTime - Date.now();
+  me = st.user;
+  bal = st.user.balance;
+  myBets = st.myBets || {};
+  if (me) $('who').textContent = me.username;
 
-  spinning = true; ball.visible = true;
-  tDist = 17; tEl = 0.95;
+  renderBoard();
+  renderPlayers();
+  renderChips();
+  updateStatus();
 
-  const W0 = W,
-        Wspan = Math.PI*2*5 + Math.random()*6,
-        Wf = W0 + Wspan,
-        Bf = Wf + idx*STEP,     // kulka wyląduje na liczbie z serwera
-        Bspan = Math.PI*2*11,
-        T = 8500,
-        t0 = performance.now();
-  let zoomed = false;
+  // Jeśli faza zakładów zamknięta, a jeszcze nie animowaliśmy tej rundy
+  if (!st.betting && st.resultIdx !== null && st.roundId !== lastAnimatedRound && !animating){
+    lastAnimatedRound = st.roundId;
+    animating = true;
 
-  (function f(now){
-    const t = Math.min(1, (now - t0) / T),
-          e = 1 - Math.pow(1 - t, 3);
-    W = W0 + e*Wspan;
+    const remaining = Math.max(2000, Math.min(9000, st.roundEndsAt - (Date.now() + clockSkew)));
+    await animateSpin(st.resultIdx, remaining);
 
-    const ba = Bf + (1 - e)*Bspan,
-          dd = Math.min(1, Math.max(0, (t - 0.55) / 0.45)),
-          sm = dd*dd*(3 - 2*dd);
+    // efekt końca
+    hitT = performance.now();
+    hit.color.set(0xffd54a);
+    burst(0xffd54a);
 
-    let rr = 4.45 - (4.45 - 3.2)*sm, yb = 0;
-    if (t > 0.55 && !zoomed){ zoomed = true; tDist = 10.5; tEl = 0.8; }
-    if (t > 0.85 && t < 1){
-      const q = (1 - t) * 6;
-      rr += Math.sin((t - 0.85)*75) * 0.05 * q * 0.5;
-      yb  = Math.abs(Math.sin((t - 0.85)*60)) * 0.1 * q;
+    // historia
+    const d = document.createElement('div');
+    d.className = 'dot ' + col(st.result); d.textContent = st.result;
+    $('hist').prepend(d);
+    if ($('hist').children.length > 12) $('hist').lastChild.remove();
+
+    // komunikat
+    const myWin = (() => {
+      // policz lokalnie (pojawi się z rozliczenia w następnym stanie)
+      if (!st.myBets) return 0;
+      let w = 0;
+      for (const k in st.myBets) {
+        const rr = rule(k);
+        if (rr && rr[1](st.result)) w += Number(st.myBets[k]) * rr[0];
+      }
+      return w;
+    })();
+    if (myWin > 0) {
+      $('res').innerHTML = `<span class="dot big ${col(st.result)}">${st.result}</span>` +
+        `<span style="color:var(--green)">wygrana ${myWin.toLocaleString('pl-PL')}</span>`;
+    } else {
+      $('res').innerHTML = `<span class="dot big ${col(st.result)}">${st.result}</span>` +
+        `<span style="color:var(--muted-2);font-size:14px">Wynik rundy</span>`;
     }
-    placeBall(ba, rr, yb);
 
-    if (t < 1) requestAnimationFrame(f);
-    else {
-      spinning = false;
-      rest = idx;
-      hitT = performance.now();
-      hit.color.set(win > 0 ? 0xffd54a : 0xff3040);
-      if (win > 0) burst(0xffd54a);
-      finish(num, win, net, user);
+    animating = false;
+  } else if (st.betting && !animating) {
+    // faza zakładów
+    if ($('res').textContent === 'Łączenie z serwerem…') {
+      $('res').textContent = 'Postaw zakłady!';
     }
-  })(t0);
+  }
 }
+
+// szybkie ticki na lokalny countdown
+setInterval(updateStatus, 120);
+setInterval(poll, 900);
 
 /* ===================== BOOT ===================== */
 (async function(){
@@ -716,5 +912,13 @@ async function spin(){
   $('who').textContent = me.username;
   build();
   fit();
+  renderChips();
+  poll();
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') poll();
+  });
+  window.addEventListener('focus', poll);
+  window.addEventListener('pageshow', e => { if (e.persisted) poll(); });
 })();
 </script></body></html>

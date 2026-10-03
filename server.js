@@ -438,6 +438,175 @@ app.post('/api/slots/spin', auth, async (req, res) => {
   }
 });
 
+/* ============ RULETKA LIVE (rundy co 30 s) ============ */
+const RL_ROUND_MS = 30000;   // długość rundy
+const RL_BET_MS   = 22000;   // okno zakładów
+
+function rlRoundId(now = Date.now()) { return Math.floor(now / RL_ROUND_MS); }
+function rlStart(rid)                { return rid * RL_ROUND_MS; }
+function rlResult(rid) {
+  // deterministyczny, serwerowy wynik rundy (indeks w tablicy ORDER)
+  const h = crypto.createHash('sha256').update('ga-rl-v1-seed-' + rid).digest();
+  return h.readUInt32BE(0) % 37;
+}
+
+// Rozlicza wszystkie nierozliczone rundy <= maxRid (wypłaca wygrane, aktualizuje statystyki)
+async function rlSettleUpTo(maxRid) {
+  let last = parseInt(await redis.get('rl:settled'), 10);
+  if (!Number.isFinite(last)) last = maxRid - 1;
+  const from = Math.max(last + 1, maxRid - 40); // nie cofamy się w nieskończoność
+  let changed = false;
+
+  for (let r = from; r <= maxRid; r++) {
+    let raw = null;
+    try { raw = await redis.hgetall('rl:bets:' + r); } catch (e) {}
+    if (raw && Object.keys(raw).length) {
+      const num = ORDER[rlResult(r)];
+      for (const userKey in raw) {
+        const u = db.users[userKey];
+        if (!u) continue;
+        let userBets;
+        try {
+          userBets = typeof raw[userKey] === 'string' ? JSON.parse(raw[userKey]) : raw[userKey];
+        } catch (e) { continue; }
+        let win = 0;
+        for (const k in userBets) {
+          const rr = rule(k);
+          if (rr && rr[1](num)) win += Number(userBets[k]) * rr[0];
+        }
+        u.balance += win;
+        u.totalWon += win;
+        u.spins += 1;
+        if (win > 0) u.wins += 1;
+        if (win > u.biggestWin) u.biggestWin = win;
+        changed = true;
+      }
+    }
+  }
+  await redis.set('rl:settled', maxRid);
+  if (changed) await save();
+}
+
+/* --- STAN RUNDY (polling) --- */
+app.get('/api/roulette/state', auth, async (req, res) => {
+  const now = Date.now();
+  const rid = rlRoundId(now);
+  const inRound = now - rlStart(rid);
+  const betting = inRound < RL_BET_MS;
+
+  // Rozliczamy poprzednie rundy; jeśli zakłady w bieżącej już zamknięte — też bieżącą
+  const settledUpTo = betting ? rid - 1 : rid;
+  if (settledUpTo >= 0) await rlSettleUpTo(settledUpTo);
+
+  const rIdx = rlResult(rid);
+  const num  = ORDER[rIdx];
+
+  let raw = {};
+  try { raw = (await redis.hgetall('rl:bets:' + rid)) || {}; } catch (e) { raw = {}; }
+
+  const bets = {};
+  for (const userKey in raw) {
+    const u = db.users[userKey];
+    if (!u) continue;
+    try {
+      bets[u.username] = typeof raw[userKey] === 'string' ? JSON.parse(raw[userKey]) : raw[userKey];
+    } catch (e) {}
+  }
+
+  res.json({
+    roundId: rid,
+    startAt: rlStart(rid),
+    elapsed: inRound,
+    betting,
+    betEndsAt:   rlStart(rid) + RL_BET_MS,
+    roundEndsAt: rlStart(rid) + RL_ROUND_MS,
+    result:    betting ? null : num,
+    resultIdx: betting ? null : rIdx,
+    bets,                              // { username: { betKey: amount } }
+    myBets: bets[req.user.username] || {},
+    serverTime: now,
+    user: pub(req.user)
+  });
+});
+
+/* --- POSTAW / ZDEJMIJ (delta) --- */
+app.post('/api/roulette/bet', auth, async (req, res) => {
+  const now = Date.now();
+  const rid = rlRoundId(now);
+  if (now - rlStart(rid) >= RL_BET_MS)
+    return res.status(400).json({ error: 'Zakłady zamknięte — poczekaj na nową rundę' });
+
+  const delta = req.body?.delta;
+  if (!delta || typeof delta !== 'object')
+    return res.status(400).json({ error: 'Brak zakładu' });
+
+  let change = 0;
+  for (const k in delta) {
+    const v = Number(delta[k]);
+    const rr = rule(k);
+    if (!rr || !Number.isFinite(v) || v === 0 || !Number.isInteger(v) || Math.abs(v) > 10_000_000)
+      return res.status(400).json({ error: 'Nieprawidłowy zakład' });
+    change += v;
+  }
+  if (change > req.user.balance)
+    return res.status(400).json({ error: 'Za mało żetonów' });
+
+  const key = 'rl:bets:' + rid;
+  let existing = null;
+  try { existing = await redis.hget(key, req.userKey); } catch (e) {}
+  let myBets = {};
+  if (existing) {
+    try { myBets = typeof existing === 'string' ? JSON.parse(existing) : existing; }
+    catch (e) { myBets = {}; }
+  }
+
+  for (const k in delta) {
+    const v = Number(delta[k]);
+    const nv = (myBets[k] || 0) + v;
+    if (nv < 0) return res.status(400).json({ error: 'Nie można zdjąć więcej niż postawiono' });
+    if (nv === 0) delete myBets[k]; else myBets[k] = nv;
+  }
+
+  req.user.balance -= change;
+  if (change > 0) req.user.totalWagered += change;
+
+  try {
+    await redis.hset(key, { [req.userKey]: JSON.stringify(myBets) });
+    await redis.expire(key, 300); // 5 min
+  } catch (e) { console.error('Redis bet error:', e.message); }
+  await save();
+
+  res.json({ user: pub(req.user), myBets });
+});
+
+/* --- WYCZYŚĆ SWOJE ZAKŁADY --- */
+app.post('/api/roulette/clear', auth, async (req, res) => {
+  const now = Date.now();
+  const rid = rlRoundId(now);
+  if (now - rlStart(rid) >= RL_BET_MS)
+    return res.status(400).json({ error: 'Zakłady zamknięte' });
+
+  const key = 'rl:bets:' + rid;
+  let existing = null;
+  try { existing = await redis.hget(key, req.userKey); } catch (e) {}
+  if (!existing) return res.json({ user: pub(req.user), myBets: {} });
+
+  let myBets;
+  try { myBets = typeof existing === 'string' ? JSON.parse(existing) : existing; }
+  catch (e) { myBets = {}; }
+
+  let refund = 0;
+  for (const k in myBets) refund += Number(myBets[k]);
+
+  req.user.balance += refund;
+  req.user.totalWagered = Math.max(0, req.user.totalWagered - refund);
+
+  try { await redis.hdel(key, req.userKey); } catch (e) {}
+  await save();
+
+  res.json({ user: pub(req.user), myBets: {} });
+});
+
 /* ============ RANKING ============ */
 app.get('/api/leaderboard', (req, res) => {
   const all = Object.values(db.users).map(pub);
