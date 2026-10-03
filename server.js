@@ -439,36 +439,61 @@ app.post('/api/slots/spin', auth, async (req, res) => {
 });
 
 /* ============ RULETKA LIVE (rundy co 30 s) ============ */
-const RL_ROUND_MS = 30000;   // długość rundy
-const RL_BET_MS   = 22000;   // okno zakładów
+const RL_ROUND_MS = 30000;
+const RL_BET_MS   = 22000;
 
 function rlRoundId(now = Date.now()) { return Math.floor(now / RL_ROUND_MS); }
 function rlStart(rid)                { return rid * RL_ROUND_MS; }
 function rlResult(rid) {
-  // deterministyczny, serwerowy wynik rundy (indeks w tablicy ORDER)
   const h = crypto.createHash('sha256').update('ga-rl-v1-seed-' + rid).digest();
   return h.readUInt32BE(0) % 37;
 }
 
-// Rozlicza wszystkie nierozliczone rundy <= maxRid (wypłaca wygrane, aktualizuje statystyki)
+/* --- Rozproszony lock (Redis SET NX EX) ---
+   Serializuje wszystkie modyfikacje bazy w ruletce,
+   żeby polling nie nadpisywał świeżo postawionych zakładów. */
+async function withLock(fn, timeoutMs = 4000) {
+  const lockKey = 'casino:dblock';
+  const token = crypto.randomBytes(8).toString('hex');
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const ok = await redis.set(lockKey, token, { nx: true, ex: 5 });
+      if (ok === 'OK' || ok === true || ok === 1) {
+        try { return await fn(); }
+        finally {
+          try {
+            const cur = await redis.get(lockKey);
+            if (cur === token) await redis.del(lockKey);
+          } catch (e) {}
+        }
+      }
+    } catch (e) { /* retry */ }
+    await new Promise(r => setTimeout(r, 20 + Math.random() * 30));
+  }
+  throw new Error('LOCK_TIMEOUT');
+}
+
+/* --- Rozliczanie rund w historii --- */
 async function rlSettleUpTo(maxRid) {
   let last = parseInt(await redis.get('rl:settled'), 10);
   if (!Number.isFinite(last)) last = maxRid - 1;
-  const from = Math.max(last + 1, maxRid - 40); // nie cofamy się w nieskończoność
+  const from = Math.max(last + 1, maxRid - 40);
   let changed = false;
+  const results = [];
 
   for (let r = from; r <= maxRid; r++) {
     let raw = null;
     try { raw = await redis.hgetall('rl:bets:' + r); } catch (e) {}
     if (raw && Object.keys(raw).length) {
       const num = ORDER[rlResult(r)];
+      const color = num === 0 ? 'green' : REDS.has(num) ? 'red' : 'black';
       for (const userKey in raw) {
         const u = db.users[userKey];
         if (!u) continue;
         let userBets;
-        try {
-          userBets = typeof raw[userKey] === 'string' ? JSON.parse(raw[userKey]) : raw[userKey];
-        } catch (e) { continue; }
+        try { userBets = typeof raw[userKey] === 'string' ? JSON.parse(raw[userKey]) : raw[userKey]; }
+        catch (e) { continue; }
         let win = 0;
         for (const k in userBets) {
           const rr = rule(k);
@@ -481,37 +506,76 @@ async function rlSettleUpTo(maxRid) {
         if (win > u.biggestWin) u.biggestWin = win;
         changed = true;
       }
+      results.push({ rid: r, num, color });
     }
   }
   await redis.set('rl:settled', maxRid);
   if (changed) await save();
+  for (const r of results) {
+    try { await redis.lpush('rl:history', JSON.stringify(r)); } catch (e) {}
+  }
+  try { await redis.ltrim('rl:history', 0, 29); } catch (e) {}
+  return changed;
+}
+
+/* --- Sprawdź i rozlicz w razie potrzeby (z lockiem) --- */
+async function rlEnsureSettled() {
+  const now = Date.now();
+  const rid = rlRoundId(now);
+  const inRound = now - rlStart(rid);
+  const betting = inRound < RL_BET_MS;
+  const settledUpTo = betting ? rid - 1 : rid;
+  if (settledUpTo < 0) return;
+
+  const last = parseInt(await redis.get('rl:settled'), 10);
+  if (Number.isFinite(last) && last >= settledUpTo) return;
+
+  try {
+    await withLock(async () => {
+      await loadDb();
+      const s = parseInt(await redis.get('rl:settled'), 10);
+      if (!Number.isFinite(s) || s < settledUpTo) {
+        await rlSettleUpTo(settledUpTo);
+      }
+    });
+  } catch (e) {
+    console.error('Settle error:', e.message);
+  }
 }
 
 /* --- STAN RUNDY (polling) --- */
 app.get('/api/roulette/state', auth, async (req, res) => {
+  await rlEnsureSettled();
+  await loadDb();                       // świeże dane po ewentualnym rozliczeniu
+  const u = db.users[req.userKey];
+  if (!u) return res.status(401).json({ error: 'Sesja wygasła' });
+  req.user = u;
+
   const now = Date.now();
   const rid = rlRoundId(now);
   const inRound = now - rlStart(rid);
   const betting = inRound < RL_BET_MS;
 
-  // Rozliczamy poprzednie rundy; jeśli zakłady w bieżącej już zamknięte — też bieżącą
-  const settledUpTo = betting ? rid - 1 : rid;
-  if (settledUpTo >= 0) await rlSettleUpTo(settledUpTo);
-
   const rIdx = rlResult(rid);
   const num  = ORDER[rIdx];
 
   let raw = {};
-  try { raw = (await redis.hgetall('rl:bets:' + rid)) || {}; } catch (e) { raw = {}; }
-
+  try { raw = (await redis.hgetall('rl:bets:' + rid)) || {}; } catch (e) {}
   const bets = {};
   for (const userKey in raw) {
-    const u = db.users[userKey];
-    if (!u) continue;
-    try {
-      bets[u.username] = typeof raw[userKey] === 'string' ? JSON.parse(raw[userKey]) : raw[userKey];
-    } catch (e) {}
+    const uu = db.users[userKey];
+    if (!uu) continue;
+    try { bets[uu.username] = typeof raw[userKey] === 'string' ? JSON.parse(raw[userKey]) : raw[userKey]; }
+    catch (e) {}
   }
+
+  let history = [];
+  try {
+    const hraw = await redis.lrange('rl:history', 0, 19);
+    history = (hraw || [])
+      .map(h => { try { return typeof h === 'string' ? JSON.parse(h) : h; } catch (e) { return null; } })
+      .filter(Boolean);
+  } catch (e) {}
 
   res.json({
     roundId: rid,
@@ -522,89 +586,123 @@ app.get('/api/roulette/state', auth, async (req, res) => {
     roundEndsAt: rlStart(rid) + RL_ROUND_MS,
     result:    betting ? null : num,
     resultIdx: betting ? null : rIdx,
-    bets,                              // { username: { betKey: amount } }
-    myBets: bets[req.user.username] || {},
+    bets,
+    myBets: bets[u.username] || {},
+    history,
     serverTime: now,
-    user: pub(req.user)
+    user: pub(u)
   });
 });
 
-/* --- POSTAW / ZDEJMIJ (delta) --- */
+/* --- POSTAW / ZDEJMIJ --- */
 app.post('/api/roulette/bet', auth, async (req, res) => {
-  const now = Date.now();
-  const rid = rlRoundId(now);
-  if (now - rlStart(rid) >= RL_BET_MS)
-    return res.status(400).json({ error: 'Zakłady zamknięte — poczekaj na nową rundę' });
-
-  const delta = req.body?.delta;
-  if (!delta || typeof delta !== 'object')
-    return res.status(400).json({ error: 'Brak zakładu' });
-
-  let change = 0;
-  for (const k in delta) {
-    const v = Number(delta[k]);
-    const rr = rule(k);
-    if (!rr || !Number.isFinite(v) || v === 0 || !Number.isInteger(v) || Math.abs(v) > 10_000_000)
-      return res.status(400).json({ error: 'Nieprawidłowy zakład' });
-    change += v;
-  }
-  if (change > req.user.balance)
-    return res.status(400).json({ error: 'Za mało żetonów' });
-
-  const key = 'rl:bets:' + rid;
-  let existing = null;
-  try { existing = await redis.hget(key, req.userKey); } catch (e) {}
-  let myBets = {};
-  if (existing) {
-    try { myBets = typeof existing === 'string' ? JSON.parse(existing) : existing; }
-    catch (e) { myBets = {}; }
-  }
-
-  for (const k in delta) {
-    const v = Number(delta[k]);
-    const nv = (myBets[k] || 0) + v;
-    if (nv < 0) return res.status(400).json({ error: 'Nie można zdjąć więcej niż postawiono' });
-    if (nv === 0) delete myBets[k]; else myBets[k] = nv;
-  }
-
-  req.user.balance -= change;
-  if (change > 0) req.user.totalWagered += change;
-
   try {
-    await redis.hset(key, { [req.userKey]: JSON.stringify(myBets) });
-    await redis.expire(key, 300); // 5 min
-  } catch (e) { console.error('Redis bet error:', e.message); }
-  await save();
+    const out = await withLock(async () => {
+      await loadDb();
+      const u = db.users[req.userKey];
+      if (!u) { const e = new Error('Sesja wygasła'); e.code = 401; throw e; }
 
-  res.json({ user: pub(req.user), myBets });
+      const now = Date.now();
+      const rid = rlRoundId(now);
+      if (now - rlStart(rid) >= RL_BET_MS) {
+        const e = new Error('Zakłady zamknięte — poczekaj na nową rundę'); e.code = 400; throw e;
+      }
+
+      const delta = req.body?.delta;
+      if (!delta || typeof delta !== 'object') {
+        const e = new Error('Brak zakładu'); e.code = 400; throw e;
+      }
+
+      let change = 0;
+      for (const k in delta) {
+        const v = Number(delta[k]);
+        const rr = rule(k);
+        if (!rr || !Number.isFinite(v) || v === 0 || !Number.isInteger(v) || Math.abs(v) > 10_000_000) {
+          const e = new Error('Nieprawidłowy zakład'); e.code = 400; throw e;
+        }
+        change += v;
+      }
+      if (change > u.balance) { const e = new Error('Za mało żetonów'); e.code = 400; throw e; }
+
+      const key = 'rl:bets:' + rid;
+      let existing = null;
+      try { existing = await redis.hget(key, req.userKey); } catch (e) {}
+      let myBets = {};
+      if (existing) {
+        try { myBets = typeof existing === 'string' ? JSON.parse(existing) : existing; }
+        catch (e) { myBets = {}; }
+      }
+
+      for (const k in delta) {
+        const v = Number(delta[k]);
+        const nv = (myBets[k] || 0) + v;
+        if (nv < 0) { const e = new Error('Nie można zdjąć więcej niż postawiono'); e.code = 400; throw e; }
+        if (nv === 0) delete myBets[k]; else myBets[k] = nv;
+      }
+
+      u.balance -= change;
+      if (change > 0) u.totalWagered += change;
+
+      try {
+        await redis.hset(key, { [req.userKey]: JSON.stringify(myBets) });
+        await redis.expire(key, 300);
+      } catch (e) { console.error('Redis bet error:', e.message); }
+      await save();
+
+      return { user: pub(u), myBets };
+    });
+    res.json(out);
+  } catch (e) {
+    if (e.code === 401) return res.status(401).json({ error: e.message });
+    if (e.code === 400) return res.status(400).json({ error: e.message });
+    if (e.message === 'LOCK_TIMEOUT') return res.status(503).json({ error: 'Serwer zajęty, spróbuj ponownie' });
+    console.error('Bet error:', e);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
 });
 
 /* --- WYCZYŚĆ SWOJE ZAKŁADY --- */
 app.post('/api/roulette/clear', auth, async (req, res) => {
-  const now = Date.now();
-  const rid = rlRoundId(now);
-  if (now - rlStart(rid) >= RL_BET_MS)
-    return res.status(400).json({ error: 'Zakłady zamknięte' });
+  try {
+    const out = await withLock(async () => {
+      await loadDb();
+      const u = db.users[req.userKey];
+      if (!u) { const e = new Error('Sesja wygasła'); e.code = 401; throw e; }
 
-  const key = 'rl:bets:' + rid;
-  let existing = null;
-  try { existing = await redis.hget(key, req.userKey); } catch (e) {}
-  if (!existing) return res.json({ user: pub(req.user), myBets: {} });
+      const now = Date.now();
+      const rid = rlRoundId(now);
+      if (now - rlStart(rid) >= RL_BET_MS) {
+        const e = new Error('Zakłady zamknięte'); e.code = 400; throw e;
+      }
 
-  let myBets;
-  try { myBets = typeof existing === 'string' ? JSON.parse(existing) : existing; }
-  catch (e) { myBets = {}; }
+      const key = 'rl:bets:' + rid;
+      let existing = null;
+      try { existing = await redis.hget(key, req.userKey); } catch (e) {}
+      if (!existing) return { user: pub(u), myBets: {} };
 
-  let refund = 0;
-  for (const k in myBets) refund += Number(myBets[k]);
+      let myBets;
+      try { myBets = typeof existing === 'string' ? JSON.parse(existing) : existing; }
+      catch (e) { myBets = {}; }
 
-  req.user.balance += refund;
-  req.user.totalWagered = Math.max(0, req.user.totalWagered - refund);
+      let refund = 0;
+      for (const k in myBets) refund += Number(myBets[k]);
 
-  try { await redis.hdel(key, req.userKey); } catch (e) {}
-  await save();
+      u.balance += refund;
+      u.totalWagered = Math.max(0, u.totalWagered - refund);
 
-  res.json({ user: pub(req.user), myBets: {} });
+      try { await redis.hdel(key, req.userKey); } catch (e) {}
+      await save();
+
+      return { user: pub(u), myBets: {} };
+    });
+    res.json(out);
+  } catch (e) {
+    if (e.code === 401) return res.status(401).json({ error: e.message });
+    if (e.code === 400) return res.status(400).json({ error: e.message });
+    if (e.message === 'LOCK_TIMEOUT') return res.status(503).json({ error: 'Serwer zajęty, spróbuj ponownie' });
+    console.error('Clear error:', e);
+    res.status(500).json({ error: 'Błąd serwera' });
+  }
 });
 
 /* ============ RANKING ============ */

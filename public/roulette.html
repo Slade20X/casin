@@ -380,14 +380,13 @@ function chipColor(v){
 
 /* ===================== STAN ===================== */
 let bal = 0, chip = 100;
-let myBets = {};         // moje zakłady w bieżącej rundzie
-let stack = [];          // historia do cofania (localny)
-let state = null;        // ostatni stan z serwera
-let busy = false;        // trwa request
-let clockSkew = 0;       // serwer - klient (ms)
+let myBets = {};
+let stack = [];
+let state = null;
+let clockSkew = 0;
 let lastAnimatedRound = -1;
 let animating = false;
-let W = 0;               // rotacja koła (radiany)
+let W = 0;
 const STEP = Math.PI*2/37;
 const $ = id => document.getElementById(id);
 
@@ -439,7 +438,7 @@ addEventListener('resize', fit);
 
 /* ===================== RENDER ===================== */
 function renderChips(){
-  const dis = busy || !state || !state.betting;
+  const dis = !state || !state.betting;
   $('chips').innerHTML = CHIPS.map(v =>
     `<button class="ch ${v===chip?'sel':''}" style="background:${CHIPC[v]}" ${dis?'disabled':''} onclick="setChip(${v})">${chipLabel(v)}</button>`
   ).join('');
@@ -447,10 +446,8 @@ function renderChips(){
 function setChip(v){ chip = v; renderChips(); }
 
 function renderBoard(){
-  // Usuń stare chipy i badge
   B.querySelectorAll('.chip,.cbadge').forEach(x => x.remove());
 
-  // Zsumuj wszystkie zakłady graczy
   const totals = {}, counts = {};
   if (state?.bets) {
     for (const uname in state.bets) {
@@ -466,13 +463,11 @@ function renderBoard(){
     const k = el.dataset.k;
     const tot = totals[k];
     if (!tot) return;
-
     const c = document.createElement('span');
     c.className = 'chip';
     c.style.background = chipColor(tot);
     c.textContent = tot >= 1000 ? (tot/1000).toFixed(1).replace('.0','')+'k' : tot;
     el.appendChild(c);
-
     if (counts[k] > 1) {
       const b = document.createElement('span');
       b.className = 'cbadge';
@@ -481,7 +476,6 @@ function renderBoard(){
     }
   });
 
-  // Moja suma
   let myTot = 0;
   for (const k in myBets) myTot += Number(myBets[k]);
   $('tot').textContent = myTot.toLocaleString('pl-PL');
@@ -498,12 +492,8 @@ function renderPlayers(){
     }
   }
   rows.sort((a,b) => b.total - a.total);
-
   const el = $('players');
-  if (!rows.length) {
-    el.innerHTML = '<div class="empty">Brak zakładów w tej rundzie</div>';
-    return;
-  }
+  if (!rows.length) { el.innerHTML = '<div class="empty">Brak zakładów w tej rundzie</div>'; return; }
   const my = me?.username;
   el.innerHTML = rows.map(r => `
     <div class="pl ${r.uname===my?'me':''}">
@@ -511,6 +501,17 @@ function renderPlayers(){
       <span class="pl-a">${r.total.toLocaleString('pl-PL')}</span>
     </div>
   `).join('');
+}
+
+/* --- HISTORIA (z serwera) --- */
+function renderHistory(){
+  const el = $('hist');
+  const h = state?.history || [];
+  if (!h.length) { el.innerHTML = ''; return; }
+  el.innerHTML = h.map(item => {
+    const c = item.color || col(item.num);
+    return `<div class="dot ${c}" title="Runda ${item.rid}">${item.num}</div>`;
+  }).join('');
 }
 
 function updateStatus(){
@@ -532,9 +533,8 @@ function updateStatus(){
     cd.textContent = (left/1000).toFixed(1) + 's';
     cd.className = 'cd spinning';
   }
-  // przyciski
-  $('undo').disabled = !state.betting || !stack.length || busy;
-  $('clr').disabled  = !state.betting || !Object.keys(myBets).length || busy;
+  $('undo').disabled = !state.betting || !stack.length;
+  $('clr').disabled  = !state.betting || !Object.keys(myBets).length;
 }
 
 /* ===================== AKCJE ===================== */
@@ -544,20 +544,18 @@ function toast(msg, err){
   t.textContent = msg;
   t.className = err ? 'err on' : 'on';
   clearTimeout(toastT);
-  toastT = setTimeout(() => t.className = '', 2400);
+  toastT = setTimeout(() => t.className = '', 2200);
 }
 function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 async function bet(k){
-  if (busy || !state || !state.betting) return;
+  if (!state || !state.betting) return;
   if (chip > bal) { toast('Za mało żetonów', true); return; }
-  busy = true; renderChips();
+
   const r = await api('/api/roulette/bet', 'POST', { delta: { [k]: chip } });
-  busy = false;
   if (!r.ok) {
     if (r.status === 401) { logout(); return; }
     toast(r.data?.error || 'Błąd', true);
-    renderChips(); updateStatus();
     return;
   }
   me = r.data.user;
@@ -568,16 +566,10 @@ async function bet(k){
 }
 
 async function undo(){
-  if (busy || !state?.betting || !stack.length) return;
+  if (!state?.betting || !stack.length) return;
   const [k, v] = stack[stack.length - 1];
-  busy = true; renderChips(); updateStatus();
   const r = await api('/api/roulette/bet', 'POST', { delta: { [k]: -v } });
-  busy = false;
-  if (!r.ok) {
-    toast(r.data?.error || 'Błąd', true);
-    renderChips(); updateStatus();
-    return;
-  }
+  if (!r.ok) { toast(r.data?.error || 'Błąd', true); return; }
   stack.pop();
   me = r.data.user;
   bal = r.data.user.balance;
@@ -586,15 +578,9 @@ async function undo(){
 }
 
 async function clearBets(){
-  if (busy || !state?.betting || !Object.keys(myBets).length) return;
-  busy = true; renderChips(); updateStatus();
+  if (!state?.betting || !Object.keys(myBets).length) return;
   const r = await api('/api/roulette/clear', 'POST');
-  busy = false;
-  if (!r.ok) {
-    toast(r.data?.error || 'Błąd', true);
-    renderChips(); updateStatus();
-    return;
-  }
+  if (!r.ok) { toast(r.data?.error || 'Błąd', true); return; }
   me = r.data.user;
   bal = r.data.user.balance;
   myBets = {};
@@ -602,7 +588,7 @@ async function clearBets(){
   renderBoard(); renderChips(); updateStatus();
 }
 
-/* ===================== 3D (bez zmian wizualnych) ===================== */
+/* ===================== 3D ===================== */
 const stage = $('stage');
 const R = new THREE.WebGLRenderer({ canvas: $('gl'), antialias:true });
 R.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -678,13 +664,11 @@ for(let i=0;i<37;i++){
     new THREE.CylinderGeometry(3.78,3.78,0.2,1,1,false, Math.PI/2-a-STEP*0.49, STEP*0.98),
     pm[col(n)]);
   w.position.y = 0.2; wheel.add(w);
-
   const p = new THREE.Mesh(new THREE.PlaneGeometry(0.5,0.5),
     new THREE.MeshBasicMaterial({ map:numTex(n), transparent:true, color:0xc8c8c8 }));
   p.rotation.x = -Math.PI/2; p.rotation.z = -a-Math.PI/2;
   p.position.set(3.15*Math.cos(a), 0.312, 3.15*Math.sin(a));
   wheel.add(p);
-
   const b = a - STEP/2, f = new THREE.Mesh(new THREE.BoxGeometry(1.3,0.17,0.035), GOLD);
   f.position.set(3.15*Math.cos(b), 0.37, 3.15*Math.sin(b));
   f.rotation.y = -b;
@@ -771,18 +755,11 @@ function loop(){
     const a = b.p.geometry.attributes.position;
     for(let j=0;j<b.vel.length;j++){
       const v = b.vel[j]; v.y -= 9*dt;
-      a.setXYZ(j,
-        a.getX(j)+v.x*dt,
-        Math.max(0.3, a.getY(j)+v.y*dt),
-        a.getZ(j)+v.z*dt
-      );
+      a.setXYZ(j, a.getX(j)+v.x*dt, Math.max(0.3, a.getY(j)+v.y*dt), a.getZ(j)+v.z*dt);
     }
     a.needsUpdate = true;
     b.p.material.opacity = Math.max(0, 1 - b.t/2.2);
-    if(b.t > 2.2){
-      scene.remove(b.p); b.p.geometry.dispose();
-      bursts.splice(i,1);
-    }
+    if(b.t > 2.2){ scene.remove(b.p); b.p.geometry.dispose(); bursts.splice(i,1); }
   }
   R.render(scene, cam);
 }
@@ -818,87 +795,85 @@ function animateSpin(idx, durationMs){
       }
       placeBall(ba, rr, yb);
       if (t < 1) requestAnimationFrame(f);
-      else {
-        spinning = false;
-        rest = idx;
-        resolve();
-      }
+      else { spinning = false; rest = idx; resolve(); }
     })(t0);
   });
 }
 
 /* ===================== POLLING ===================== */
+let polling = false;
 async function poll(){
-  if (busy) return;
-  const r = await api('/api/roulette/state');
-  if (!r.ok) {
-    if (r.status === 401) { logout(); return; }
-    return;
-  }
-  const st = r.data;
+  if (polling) return;
+  polling = true;
+  try {
+    const r = await api('/api/roulette/state');
+    if (!r.ok) {
+      if (r.status === 401) { logout(); return; }
+      return;
+    }
+    const st = r.data;
 
-  // nowa runda => reset lokalnej historii undo
-  if (state && state.roundId !== st.roundId) stack = [];
-  state = st;
-  clockSkew = st.serverTime - Date.now();
-  me = st.user;
-  bal = st.user.balance;
-  myBets = st.myBets || {};
-  if (me) $('who').textContent = me.username;
+    if (state && state.roundId !== st.roundId) stack = [];
+    state = st;
+    clockSkew = st.serverTime - Date.now();
+    me = st.user;
+    bal = st.user.balance;
+    myBets = st.myBets || {};
+    if (me) $('who').textContent = me.username;
 
-  renderBoard();
-  renderPlayers();
-  renderChips();
-  updateStatus();
+    renderBoard();
+    renderPlayers();
+    renderHistory();
+    renderChips();
+    updateStatus();
 
-  // Jeśli faza zakładów zamknięta, a jeszcze nie animowaliśmy tej rundy
-  if (!st.betting && st.resultIdx !== null && st.roundId !== lastAnimatedRound && !animating){
-    lastAnimatedRound = st.roundId;
-    animating = true;
+    // Wyzwól animację, gdy runda się skończyła
+    if (!st.betting && st.resultIdx !== null && st.roundId !== lastAnimatedRound && !animating){
+      lastAnimatedRound = st.roundId;
+      animating = true;
 
-    const remaining = Math.max(2000, Math.min(9000, st.roundEndsAt - (Date.now() + clockSkew)));
-    await animateSpin(st.resultIdx, remaining);
+      const remaining = Math.max(2000, Math.min(9000, st.roundEndsAt - (Date.now() + clockSkew)));
+      await animateSpin(st.resultIdx, remaining);
 
-    // efekt końca
-    hitT = performance.now();
-    hit.color.set(0xffd54a);
-    burst(0xffd54a);
+      hitT = performance.now();
+      hit.color.set(0xffd54a);
+      burst(0xffd54a);
 
-    // historia
-    const d = document.createElement('div');
-    d.className = 'dot ' + col(st.result); d.textContent = st.result;
-    $('hist').prepend(d);
-    if ($('hist').children.length > 12) $('hist').lastChild.remove();
+      const myWin = (() => {
+        if (!st.myBets) return 0;
+        let w = 0;
+        for (const k in st.myBets) {
+          const rr = rule(k);
+          if (rr && rr[1](st.result)) w += Number(st.myBets[k]) * rr[0];
+        }
+        return w;
+      })();
 
-    // komunikat
-    const myWin = (() => {
-      // policz lokalnie (pojawi się z rozliczenia w następnym stanie)
-      if (!st.myBets) return 0;
-      let w = 0;
-      for (const k in st.myBets) {
-        const rr = rule(k);
-        if (rr && rr[1](st.result)) w += Number(st.myBets[k]) * rr[0];
+      const stake = (() => {
+        let s = 0;
+        for (const k in st.myBets) s += Number(st.myBets[k]);
+        return s;
+      })();
+
+      if (myWin > 0) {
+        $('res').innerHTML = `<span class="dot big ${col(st.result)}">${st.result}</span>` +
+          `<span style="color:var(--green)">wygrana ${myWin.toLocaleString('pl-PL')} (${myWin-stake>=0?'+':''}${(myWin-stake).toLocaleString('pl-PL')})</span>`;
+      } else if (stake > 0) {
+        $('res').innerHTML = `<span class="dot big ${col(st.result)}">${st.result}</span>` +
+          `<span style="color:var(--red)">przegrana −${stake.toLocaleString('pl-PL')}</span>`;
+      } else {
+        $('res').innerHTML = `<span class="dot big ${col(st.result)}">${st.result}</span>` +
+          `<span style="color:var(--muted-2);font-size:14px">Wynik rundy</span>`;
       }
-      return w;
-    })();
-    if (myWin > 0) {
-      $('res').innerHTML = `<span class="dot big ${col(st.result)}">${st.result}</span>` +
-        `<span style="color:var(--green)">wygrana ${myWin.toLocaleString('pl-PL')}</span>`;
-    } else {
-      $('res').innerHTML = `<span class="dot big ${col(st.result)}">${st.result}</span>` +
-        `<span style="color:var(--muted-2);font-size:14px">Wynik rundy</span>`;
-    }
 
-    animating = false;
-  } else if (st.betting && !animating) {
-    // faza zakładów
-    if ($('res').textContent === 'Łączenie z serwerem…') {
-      $('res').textContent = 'Postaw zakłady!';
+      // Po animacji odśwież stan żeby złapać rozliczenie
+      setTimeout(() => { animating = false; poll(); }, 500);
     }
+  } finally {
+    polling = false;
   }
 }
 
-// szybkie ticki na lokalny countdown
 setInterval(updateStatus, 120);
 setInterval(poll, 900);
 
